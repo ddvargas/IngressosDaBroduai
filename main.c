@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define TAM_BUFFER_FILE 255
 
@@ -17,6 +18,7 @@ struct evento {
 
 
 void write_trace(FILE *trace, char message[]);
+int get_randon(int max_value);
 
 int main() {
     FILE *input;
@@ -26,6 +28,7 @@ int main() {
 
     input = fopen("input.txt", "r");
     trace = fopen("trace.txt", "a");
+    srand(time(NULL));
 
     if (input != NULL) {
         if (trace != NULL) {
@@ -78,6 +81,20 @@ void write_trace(FILE *trace, char message[]) {
     }
 }
 
-//TODO: criar função de randon
+/**
+ * Retorna um numero aleatório entre 0 e maximo
+ * @param max_value numero maximo do aleatorio
+ * @return número aleatório
+ */
+int get_randon(int max_value){
+    if (max_value == NULL){
+        return rand();
+    } else{
+        if (max_value == 0){
+            return 0;
+        }
+    }
+    return rand() % max_value;
+}
 
 //TODO: criar função de
