@@ -23,51 +23,46 @@ int get_randon(int max_value);
 int main() {
     FILE *input;
     FILE *trace;
-    EVENTO *eventos = malloc(sizeof(EVENTO));
-    int num_eventos = 0;
 
     input = fopen("input.txt", "r");
     trace = fopen("trace.txt", "a");
-    srand(time(NULL));
 
-    if (input != NULL) {
-        if (trace != NULL) {
-            write_trace(trace, "Lendo arquivo de input\n");
-            char buffer_read_input[TAM_BUFFER_FILE];
-            char *linha;
-            while (!feof(input)) {
-                fgets(buffer_read_input, TAM_BUFFER_FILE, input);
-                linha = strtok(buffer_read_input, "|");
-                eventos = realloc(eventos, ++num_eventos);
-                //para cada linha, extrair os parâmetros
-                strcpy(eventos[num_eventos - 1].nome, linha);
-                linha = strtok(NULL, "|");
-                eventos[num_eventos - 1].max_lotacao = atoi(linha);
-                linha = strtok(NULL, "|");
-                eventos[num_eventos - 1].valor_ingresso = atof(linha);
-                linha = strtok(NULL, "|");
-                eventos[num_eventos - 1].max_clientes_gerar = atoi(linha);
-            }
-
-            write_trace(trace, "Leitura arquivo input terminada\n");
-
-//            for (int i = 0; i < num_eventos; i++) {
-//                printf("Evento %d\n", i);
-//                printf("nome: %s\n", eventos[i].nome);
-//                printf("Lotacao maxima: %d\n", eventos[i].max_lotacao);
-//                printf("ingressos: %f\n", eventos[i].valor_ingresso);
-//                printf("num clientes: %d\n", eventos[i].max_clientes_gerar);
-//            }
-
-
-
-            //TODO: para cada evento lançar as threads
-        } else {
-            printf("Erro ao abrir arquivo de trace\n");
-        }
-    } else {
+    if (input == NULL) {
         printf("Erro ao abrir arquivo de input\n");
+        exit(1);
     }
+    if (trace == NULL) {
+        printf("Erro ao abrir arquivo de trace\n");
+        exit(1);
+    }
+
+    //Novas alocações de memória
+    EVENTO *eventos = malloc(sizeof(EVENTO));
+    int num_eventos = 0;
+    write_trace(trace, "Lendo arquivo de input\n");
+    char buffer_read_input[TAM_BUFFER_FILE];
+    char *linha;
+
+    //processamento
+    srand(time(NULL));
+    while (!feof(input)) {
+        fgets(buffer_read_input, TAM_BUFFER_FILE, input);
+        linha = strtok(buffer_read_input, "|");
+        eventos = realloc(eventos, ++num_eventos);
+        //para cada linha, extrair os parâmetros
+        strcpy(eventos[num_eventos - 1].nome, linha);
+        linha = strtok(NULL, "|");
+        eventos[num_eventos - 1].max_lotacao = atoi(linha);
+        linha = strtok(NULL, "|");
+        eventos[num_eventos - 1].valor_ingresso = atof(linha);
+        linha = strtok(NULL, "|");
+        eventos[num_eventos - 1].max_clientes_gerar = atoi(linha);
+    }
+
+    write_trace(trace, "Leitura arquivo input terminada\n");
+
+
+    //TODO: para cada evento lançar as threads
 }
 
 /**
