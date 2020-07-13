@@ -15,6 +15,9 @@ struct evento {
     int max_clientes_gerar;
 } typedef EVENTO;
 
+
+void write_trace(FILE *trace, char message[]);
+
 int main() {
     FILE *input;
     FILE *trace;
@@ -26,6 +29,7 @@ int main() {
 
     if (input != NULL) {
         if (trace != NULL) {
+            write_trace(trace, "Lendo arquivo de input\n");
             char buffer_read_input[TAM_BUFFER_FILE];
             char *linha;
             while (!feof(input)) {
@@ -42,6 +46,8 @@ int main() {
                 eventos[num_eventos - 1].max_clientes_gerar = atoi(linha);
             }
 
+            write_trace(trace, "Leitura arquivo input terminada\n");
+
 //            for (int i = 0; i < num_eventos; i++) {
 //                printf("Evento %d\n", i);
 //                printf("nome: %s\n", eventos[i].nome);
@@ -52,7 +58,7 @@ int main() {
 
 
 
-            //TODO:
+            //TODO: para cada evento lançar as threads
         } else {
             printf("Erro ao abrir arquivo de trace\n");
         }
@@ -60,3 +66,18 @@ int main() {
         printf("Erro ao abrir arquivo de input\n");
     }
 }
+
+/**
+ * Escreve no arquivo de trace a mesaagem passada
+ * @param trace arquivo de escrita
+ * @param message
+ */
+void write_trace(FILE *trace, char message[]) {
+    if (trace != NULL && message != NULL) {
+        fprintf(trace, message);
+    }
+}
+
+//TODO: criar função de randon
+
+//TODO: criar função de
