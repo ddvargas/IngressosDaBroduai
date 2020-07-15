@@ -12,22 +12,26 @@
 #define TAM_BUFFER_FILE 255
 
 struct evento {
+    int id;
     char nome[100];
     int max_lotacao;
     float valor_ingresso;
     int max_clientes_gerar;
 } typedef EVENTO;
 
+FILE *trace;
+EVENTO *eventos;
 
-void write_trace(FILE *trace, char message[]);
+void write_trace(char message[]);
 
 int get_randon(int max_value);
 
 void thread_evento(void *args);
 
+void thread_cliente(void *args);
+
 int main() {
     FILE *input;
-    FILE *trace;
 
     input = fopen("input.txt", "r");
     trace = fopen("trace.txt", "a");
@@ -42,13 +46,13 @@ int main() {
     }
 
     //Novas alocações de memória
-    EVENTO *eventos = malloc(sizeof(EVENTO));
+    eventos = malloc(sizeof(EVENTO));
     int num_eventos = 0;
     char buffer_read_input[TAM_BUFFER_FILE];
     char *linha;
 
     //processamento
-    write_trace(trace, "Lendo arquivo de input\n");
+    write_trace("Lendo arquivo de input\n");
     srand(time(NULL));
     while (!feof(input)) {
         fgets(buffer_read_input, TAM_BUFFER_FILE, input);
@@ -62,14 +66,15 @@ int main() {
         eventos[num_eventos - 1].valor_ingresso = atof(linha);
         linha = strtok(NULL, "|");
         eventos[num_eventos - 1].max_clientes_gerar = atoi(linha);
+        eventos[num_eventos - 1].id = num_eventos - 1;
     }
-    write_trace(trace, "Leitura arquivo input terminada\n");
+    write_trace("Leitura arquivo input terminada\n");
 
 
     pthread_t tids[num_eventos];
-    write_trace(trace, "Main criando threads de eventos\n");
+    write_trace("Main criando threads de eventos\n");
     for (int i = 0; i < num_eventos; i++) {
-        if (pthread_create(&tids[i], NULL, thread_evento, (void *) &eventos[i])) {
+        if (pthread_create(&tids[i], NULL, thread_evento, (void *) &eventos[i].id)) {
             printf("Erro ao criar thread do evento %d", i);
             exit(-1);
         }
@@ -83,7 +88,7 @@ int main() {
  * @param trace arquivo de escrita
  * @param message
  */
-void write_trace(FILE *trace, char message[]) {
+void write_trace(char message[]) {
     //TODO: modificar para que o trace seja global e a função só receba a mensagem
     if (trace != NULL && message != NULL) {
         fprintf(trace, message);
@@ -95,7 +100,7 @@ void write_trace(FILE *trace, char message[]) {
  * @param max_value numero maximo do aleatorio
  * @return número aleatório
  */
-int get_randon(int max_value){
+int get_randon(int max_value) {
     if (max_value == NULL) {
         return rand();
     } else {
@@ -107,13 +112,25 @@ int get_randon(int max_value){
 }
 
 void thread_evento(void *args) {
-    EVENTO *evento = (EVENTO *) args;
+    int *id_evento = (int *) args;
 
-    printf("Evento nome: %s\n", evento->nome);
-    //Para cada evento ter o seu vetor de lugares?
-    //Criar as threads para os clientes que vão comprar até o maximo de clientes permitido para o evento
+    printf("Id evento: %d", *id_evento);
+
+    printf(", Max clientes gerar: %d", eventos[*id_evento].max_clientes_gerar);
+    //TODO: Alocar o vetor de lugares disponíveis para o evento globalmente
+
+
+    pthread_t clientes[eventos[*id_evento].max_clientes_gerar];
+    for (int i = 0; i < 5; ++i) {
+        //TODO: gerar as threads de clientes para o evento
+        pthread_create(&clientes[i], NULL, thread_cliente, (void *) args);
+    }
+
 
     pthread_exit(NULL);
 }
 
+void thread_cliente(void *args) {
+
+}
 //TODO: criar função de cliente
