@@ -7,9 +7,14 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h>
+#include <stdbool.h>
+#include <semaphore.h>
 
 #define TAM_BUFFER_FILE 255
+
+enum estado_lugar {
+    LOCADO, VAZIO, EM_COMPRA
+} typedef STATUS;
 
 struct evento {
     int id;
@@ -17,6 +22,8 @@ struct evento {
     int max_lotacao;
     float valor_ingresso;
     int max_clientes_gerar;
+    STATUS *lugares;
+    sem_t mutext, empty, full;
 } typedef EVENTO;
 
 FILE *trace;
@@ -26,9 +33,9 @@ void write_trace(char message[]);
 
 int get_randon(int max_value);
 
-void thread_evento(void *args);
+void *thread_evento(void *args);
 
-void thread_cliente(void *args);
+void *thread_cliente(void *args);
 
 int main() {
     FILE *input;
@@ -79,8 +86,9 @@ int main() {
             exit(-1);
         }
     }
-    pthread_exit(NULL);
-    //TODO: para cada evento lançar as threads
+    for (int j = 0; j < num_eventos; ++j) {
+        pthread_join(tids[j], NULL);
+    }
 }
 
 /**
@@ -111,14 +119,24 @@ int get_randon(int max_value) {
     return rand() % max_value;
 }
 
-void thread_evento(void *args) {
+void *thread_evento(void *args) {
     int *id_evento = (int *) args;
+
+    //cada thread vai iniciar seus mutexes
+    sem_init(&eventos[*id_evento].mutext, 0, 1);
+    sem_init(&eventos[*id_evento].empty, 0, eventos[*id_evento].max_lotacao);
+    sem_init(&eventos[*id_evento].full, 0, 0);
 
     printf("Id evento: %d", *id_evento);
 
     printf(", Max clientes gerar: %d", eventos[*id_evento].max_clientes_gerar);
-    //TODO: Alocar o vetor de lugares disponíveis para o evento globalmente
 
+    sem_wait(&eventos[*id_evento].mutext);
+    eventos[*id_evento].lugares = malloc(sizeof(bool) * eventos[*id_evento].max_lotacao);
+    for (int j = 0; j < eventos[*id_evento].max_lotacao; j++) {
+        eventos[*id_evento].lugares[j] = VAZIO;
+    }
+    sem_post(&eventos[*id_evento].mutext);
 
     pthread_t clientes[eventos[*id_evento].max_clientes_gerar];
     for (int i = 0; i < 5; ++i) {
@@ -126,11 +144,9 @@ void thread_evento(void *args) {
         pthread_create(&clientes[i], NULL, thread_cliente, (void *) args);
     }
 
-
     pthread_exit(NULL);
 }
 
-void thread_cliente(void *args) {
-
+void *thread_cliente(void *args) {
+    //TODO: criar função de cliente
 }
-//TODO: criar função de cliente
