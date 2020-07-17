@@ -45,11 +45,9 @@ void *thread_cliente(void *args);
 
 int main() {
     FILE *input;
-    int num_eventos = 0;
+    int num_eventos = 0, max_lotacao = 0;
     char buffer_read_input[TAM_BUFFER_FILE];
     char *linha;
-    pthread_t *tids = NULL;
-    ARG *args = NULL;
 
     input = fopen("input.txt", "r");
     trace = fopen("trace.txt", "a");
@@ -78,7 +76,11 @@ int main() {
         //para cada linha, extrair os parâmetros
         strcpy(eventos[num_eventos - 1].nome, linha);
         linha = strtok(NULL, "|");
-        eventos[num_eventos - 1].max_lotacao = atoi(linha);
+        int lotacao = atoi(linha);
+        eventos[num_eventos - 1].max_lotacao = lotacao;
+        if (max_lotacao < lotacao) {
+            max_lotacao = lotacao;
+        }
         linha = strtok(NULL, "|");
         eventos[num_eventos - 1].valor_ingresso = atof(linha);
         linha = strtok(NULL, "|");
@@ -87,31 +89,38 @@ int main() {
     }
     write_trace("Leitura arquivo input terminada\n");
 
-    write_trace("Main criando threads de eventos\n");
+    pthread_t tids[num_eventos][max_lotacao];
     for (int i = 0; i < num_eventos; i++) {
-        //TODO: mutex nos realoc de tids e args
+        printf("Inicializando evento %d\n", i);
+        sem_init(&(eventos[i].mutext), 0, 1);
+        sem_init(&(eventos[i].empty), 0, eventos[i].max_lotacao);
+        sem_init(&(eventos[i].full), 0, 0);
 
-        sem_wait(&mutex);
-        tids = (pthread_t *) realloc(tids, i + 1);
-        args = (ARG *) realloc(args, i + 1);
-        sem_post(&mutex);
+        eventos[i].lugares = (STATUS *) malloc(sizeof(STATUS) * eventos[i].max_lotacao);
 
-        args[i].id_evento = i;
-        args[i].id_thread = i + 1;
-        printf("Criando thread %d para evento\n", i);
-        if (pthread_create(&(tids[i]), NULL, thread_evento, (void *) &(args[i]))) {
-            printf("Erro ao criar thread do evento %d", i);
-//            exit(-1);
+        for (int j = 0; j < eventos[i].max_lotacao; ++j) {
+            eventos[i].lugares[j] = VAZIO;
+            printf("Evento[%d][%d]: %d\n", i, j, eventos[i].lugares[j]);
         }
     }
     printf("Num eventos: %d\n", num_eventos);
-    for (int j = 0; j < num_eventos; ++j) {
-        pthread_join(tids[j], NULL);
+    for (int i = 0; i < num_eventos; i++) {
+        for (int j = 0; j < eventos[i].max_lotacao; ++j) {
+            ARG args;
+            args.id_evento = i;
+            args.id_thread = j;
+            if (pthread_create(&tids[i][j], NULL, thread_cliente, (void *) &args)) {
+                printf("ERRO ao criar thread %d para evento %d", j, i);
+            }
+        }
     }
 
-    free(tids);
-    free(args);
-    free(eventos);
+    for (int i = 0; i < num_eventos; ++i) {
+        for (int j = 0; j < eventos[i].max_lotacao; ++j) {
+            pthread_join(tids[i][j], NULL);
+        }
+    }
+
     exit(0);
 }
 
@@ -139,54 +148,13 @@ int get_randon(int max_value) {
     return rand() % max_value;
 }
 
-void *thread_evento(void *arg) {
-    ARG *targ = (ARG *) arg;
-    ARG *args = NULL;
-    pthread_t *tids = NULL;
-
-
-    printf("Thread %d do evento %d foi criada\n", targ->id_thread, targ->id_evento);
-
-    //cada thread vai iniciar seus mutexes dos seus eventos
-    sem_init(&eventos[targ->id_evento].mutext, 0, 1);
-    sem_init(&eventos[targ->id_evento].empty, 0, eventos[targ->id_evento].max_lotacao);
-    sem_init(&eventos[targ->id_evento].full, 0, 0);
-    //TODO: aqui colocar a inicialização de um mutex particular?
-
-    printf("Thread %d do evento %d iniciou semáforos\n", targ->id_thread, targ->id_evento);
-
-
-    // argumentos para que seja feito o free após
-    for (int i = 0; i < eventos[targ->id_evento].max_clientes_gerar; i++) {
-        sem_wait(&mutex);
-        tids = (pthread_t *) realloc(tids, i + 1);
-        args = (ARG *) realloc(args, i + 1);
-        sem_post(&mutex);
-
-        printf("Evento %d criando thread %d para cliente\n", targ->id_evento, i);
-        if (pthread_create(&(tids[i]), NULL, thread_cliente, (void *) args)) {
-            printf("ERRO ao criar threads dos clientes evento %d", i);
-        }
-    }
-
-    for (int k = 0; k < eventos[targ->id_evento].max_clientes_gerar; ++k) {
-        pthread_join(tids[k], NULL);
-    }
-
-
-    sem_wait(&eventos[targ->id_evento].mutext);
-    free(&eventos[targ->id_evento].lugares);
-    sem_post(&eventos[targ->id_evento].mutext);
-    free(tids);
-    free(args);
-    pthread_exit(NULL);
-}
 
 void *thread_cliente(void *args) {
     ARG *targ = (ARG *) args;
 
     printf("Thread cliente %d do evento %d processada\n", targ->id_thread, targ->id_evento);
-    sleep(1);
+    sleep(3);
 
+//    free(args);
     pthread_exit(NULL);
 }
