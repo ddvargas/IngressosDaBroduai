@@ -9,8 +9,11 @@
 #include <time.h>
 #include <semaphore.h>
 #include <unistd.h>
+#include <string.h>
 
 #define TAM_BUFFER_FILE 255
+#define MAX_SLEEP_SOLICITAR_INGRESSO 20
+#define MAX_SLEEP_AUTORIZACAO_PAGAMENTO 20
 
 enum estado_lugar {
     LOCADO, VAZIO, EM_COMPRA
@@ -39,15 +42,14 @@ void write_trace(char message[]);
 
 int get_randon(int max_value);
 
-void *thread_evento(void *arg);
-
 void *thread_cliente(void *args);
 
 int main() {
     FILE *input;
-    int num_eventos = 0, max_lotacao = 0;
+    int num_eventos = 0, max_clientes = 0;
     char buffer_read_input[TAM_BUFFER_FILE];
     char *linha;
+    ARG *args = NULL;
 
     input = fopen("input.txt", "r");
     trace = fopen("trace.txt", "a");
@@ -76,26 +78,30 @@ int main() {
         //para cada linha, extrair os parâmetros
         strcpy(eventos[num_eventos - 1].nome, linha);
         linha = strtok(NULL, "|");
-        int lotacao = atoi(linha);
-        eventos[num_eventos - 1].max_lotacao = lotacao;
-        if (max_lotacao < lotacao) {
-            max_lotacao = lotacao;
-        }
+        eventos[num_eventos - 1].max_lotacao = atoi(linha);
+
         linha = strtok(NULL, "|");
         eventos[num_eventos - 1].valor_ingresso = atof(linha);
         linha = strtok(NULL, "|");
-        eventos[num_eventos - 1].max_clientes_gerar = atoi(linha);
+        int max_cli = atoi(linha);
+        eventos[num_eventos - 1].max_clientes_gerar = max_cli;
+        if (max_clientes < max_cli) {
+            max_clientes = max_cli;
+        }
         eventos[num_eventos - 1].id = num_eventos - 1;
     }
     write_trace("Leitura arquivo input terminada\n");
 
-    pthread_t tids[num_eventos][max_lotacao];
+    pthread_t tids[num_eventos][max_clientes];
     for (int i = 0; i < num_eventos; i++) {
+        fprintf(trace, "Inicializando evento %d", i);
         printf("Inicializando evento %d\n", i);
         sem_init(&(eventos[i].mutext), 0, 1);
         sem_init(&(eventos[i].empty), 0, eventos[i].max_lotacao);
         sem_init(&(eventos[i].full), 0, 0);
 
+        fprintf(trace, "Alocando memória para vetor de lugares do evento %d - Tamanho %d\n", i, eventos[i].max_lotacao);
+        printf("Alocando memória para vetor de lugares do evento %d - Tamanho %d\n", i, eventos[i].max_lotacao);
         eventos[i].lugares = (STATUS *) malloc(sizeof(STATUS) * eventos[i].max_lotacao);
 
         for (int j = 0; j < eventos[i].max_lotacao; ++j) {
@@ -103,14 +109,16 @@ int main() {
             printf("Evento[%d][%d]: %d\n", i, j, eventos[i].lugares[j]);
         }
     }
+    fprintf("Num eventos: %d\n", num_eventos);
     printf("Num eventos: %d\n", num_eventos);
     for (int i = 0; i < num_eventos; i++) {
-        for (int j = 0; j < eventos[i].max_lotacao; ++j) {
-            ARG args;
-            args.id_evento = i;
-            args.id_thread = j;
-            if (pthread_create(&tids[i][j], NULL, thread_cliente, (void *) &args)) {
+        for (int j = 0; j < eventos[i].max_clientes_gerar; ++j) {
+            args = (ARG *) malloc(sizeof(ARG));
+            args->id_evento = i;
+            args->id_thread = j;
+            if (pthread_create(&tids[i][j], NULL, thread_cliente, (void *) args)) {
                 printf("ERRO ao criar thread %d para evento %d", j, i);
+                fprintf("ERRO ao criar thread %d para evento %d", j, i);
             }
         }
     }
@@ -121,6 +129,10 @@ int main() {
         }
     }
 
+    fprintf(trace, "Execução finalizada\n\n");
+
+    fclose(input);
+    fclose(trace);
     exit(0);
 }
 
@@ -148,13 +160,30 @@ int get_randon(int max_value) {
     return rand() % max_value;
 }
 
-
+/**
+ * Implementa o comportamento de um cliente
+ * @param args identificador de thread e de evento
+ * @return nada
+ */
 void *thread_cliente(void *args) {
     ARG *targ = (ARG *) args;
 
-    printf("Thread cliente %d do evento %d processada\n", targ->id_thread, targ->id_evento);
-    sleep(3);
+    //solicitar um ingresso
+    //sleep(get_ramdom(MAX_SLEEP))
+    //se tem lugar no espetáculo
+    //efetuar o pagamento
+    //aguardar atorização da operadora do cartão
+    //se autorizada
+    //confirmar compra no evento (setar como vendido o lugar)
+    //senão liberar lugar
+    //senão recomendar outro espetaculo
+    //se cliente quiser outro espetáculo
+    //trocar id da thread para iniciar o processo de compra novamente em outro evento
 
-//    free(args);
+    sleep(get_randon(10));
+    printf("Thread cliente %d do evento %d processada\n", targ->id_thread, targ->id_evento);
+    fprintf(trace, "Thread cliente %d do evento %d processada\n", targ->id_thread, targ->id_evento);
+
+    free(args);
     pthread_exit(NULL);
 }
