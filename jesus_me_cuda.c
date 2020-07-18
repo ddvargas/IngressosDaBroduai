@@ -44,6 +44,8 @@ int get_randon(int max_value);
 
 void *thread_cliente(void *args);
 
+int solicitar_ingresso(int id_evento);
+
 int main() {
     FILE *input;
     int num_eventos = 0, max_clientes = 0;
@@ -186,4 +188,24 @@ void *thread_cliente(void *args) {
 
     free(args);
     pthread_exit(NULL);
+}
+
+/**
+ * Verifica o vetor de lugares do evento e marca ele como EM_COMPRA
+ * @param id_evento id do evento que se quer comprar um ingresso
+ * @return o lugar escolhido, senão retorna -1 para nenhum lugar disponível ou retorna -2 se algum erro acontecer
+ */
+int solicitar_ingresso(int id_evento) {
+    int retorno = -1;
+    if (id_evento >= 0) {
+        sem_wait(&eventos[id_evento].mutext);
+        for (int i = 0; i < eventos[id_evento].max_lotacao; ++i) {
+            if (eventos[id_evento].lugares[i] == VAZIO) {
+                retorno = i;
+            }
+        }
+        sem_post(&eventos[id_evento].mutext);
+        return retorno;
+    }
+    return -2;
 }
