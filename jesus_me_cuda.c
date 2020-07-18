@@ -16,7 +16,7 @@
 #define MAX_SLEEP_AUTORIZACAO_PAGAMENTO 20
 
 enum estado_lugar {
-    LOCADO, VAZIO, EM_COMPRA
+    VENDIDO, VAZIO, EM_COMPRA
 } typedef STATUS;
 
 struct evento {
@@ -46,9 +46,11 @@ void *thread_cliente(void *args);
 
 int solicitar_ingresso(int id_evento);
 
-bool efetuar_pagamento();
+bool autorizar_pagamento();
 
-int main() {
+bool confirmar_compra_evento(int id_evento, int id_lugar)
+
+        int main() {
     FILE *input;
     int num_eventos = 0, max_clientes = 0;
     char buffer_read_input[TAM_BUFFER_FILE];
@@ -173,8 +175,8 @@ void *thread_cliente(void *args) {
     ARG *targ = (ARG *) args;
 
     //solicitar um ingresso
-    //sleep(get_ramdom(MAX_SLEEP))
     //se tem lugar no espetáculo
+    //sleep(get_ramdom(MAX_SLEEP))
     //efetuar o pagamento
     //aguardar atorização da operadora do cartão
     //se autorizada
@@ -216,10 +218,30 @@ int solicitar_ingresso(int id_evento) {
  * Função que simula a operação de aprovação do pagamento por parte da operadora do cartão
  * @return true se aprovado, senão return false
  */
-bool efetuar_pagamento() {
+bool autorizar_pagamento() {
     sleep(get_randon(MAX_SLEEP_AUTORIZACAO_PAGAMENTO));
     if (get_randon(1) == 1) {
         return true;
     }
     return false;
+}
+
+/**
+ * Função que confirma a compra de um lugar em um evento
+ * @param id_evento que se deseja confirmar a compra
+ * @param id_lugar id do lugar que se deseja confirmar a compra nesse evento
+ * @return true se foi confirmada, senão retorna false
+ */
+bool confirmar_compra_evento(int id_evento, int id_lugar) {
+    if (id_evento < 0 && id_lugar < 0) {
+        return false;
+    }
+    bool retorno = false;
+    sem_wait(&eventos[id_evento].mutext);
+    if (eventos[id_evento].lugares[id_lugar] == EM_COMPRA) {
+        eventos[id_evento].lugares[id_lugar] = VENDIDO;
+        retorno = true;
+    }
+    sem_post(&eventos[id_evento].mutext);
+    return retorno;
 }
