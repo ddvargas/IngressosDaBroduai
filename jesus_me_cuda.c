@@ -9,7 +9,7 @@
 #include <time.h>
 #include <semaphore.h>
 #include <unistd.h>
-#include <string.h>
+#include <stdbool.h>
 
 #define TAM_BUFFER_FILE 255
 #define MAX_SLEEP_SOLICITAR_INGRESSO 20
@@ -45,6 +45,8 @@ int get_randon(int max_value);
 void *thread_cliente(void *args);
 
 int solicitar_ingresso(int id_evento);
+
+bool efetuar_pagamento();
 
 int main() {
     FILE *input;
@@ -208,4 +210,16 @@ int solicitar_ingresso(int id_evento) {
         return retorno;
     }
     return -2;
+}
+
+/**
+ * Função que simula a operação de aprovação do pagamento por parte da operadora do cartão
+ * @return true se aprovado, senão return false
+ */
+bool efetuar_pagamento() {
+    sleep(get_randon(MAX_SLEEP_AUTORIZACAO_PAGAMENTO));
+    if (get_randon(1) == 1) {
+        return true;
+    }
+    return false;
 }
