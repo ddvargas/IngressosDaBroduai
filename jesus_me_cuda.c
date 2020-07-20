@@ -37,6 +37,7 @@ struct thread_arg {
 FILE *trace;
 EVENTO *eventos;
 sem_t mutex; //mutex para realocações de memoria
+int num_eventos = 0;
 
 void write_trace(char message[]);
 
@@ -52,9 +53,13 @@ bool confirmar_compra_evento(int id_evento, int id_lugar);
 
 void liberar_lugar(int id_evento, int id_lugar);
 
+int recomendacao();
+
+
+
 int main() {
     FILE *input;
-    int num_eventos = 0, max_clientes = 0;
+    int max_clientes = 0;
     char buffer_read_input[TAM_BUFFER_FILE];
     char *linha;
     ARG *args = NULL;
@@ -211,8 +216,19 @@ void *thread_cliente(void *args) {
     } else {
         printf("Recomendar outro espetáculo\n");
         //recomendar outro espetáculo
-        //se cliente quiser outro espetáculo
-        //trocar id da thread para iniciar o processo de compra novamente em outro evento? (recursividade)
+        int new_id_evento = recomendacao();
+        printf("");
+        if (new_id_evento >= 0){
+            if (get_randon(2)){
+                printf("######### Cliente %d aceitou recomendação do evento %s\n",
+                        targ->id_thread, eventos[new_id_evento].nome);
+                ARG *new_arg = (ARG*) malloc(sizeof(ARG));
+                new_arg->id_thread = targ->id_thread;
+                new_arg->id_evento = new_id_evento;
+                thread_cliente((void*) new_arg);
+            }
+        }
+
     }
 
     fprintf(trace, "Thread cliente %d do evento %d processada\n", targ->id_thread, targ->id_evento);
@@ -286,4 +302,21 @@ void liberar_lugar(int id_evento, int id_lugar) {
         eventos[id_evento].lugares[id_lugar] = VAZIO;
         sem_post(&eventos[id_evento].mutext);
     }
+}
+
+
+int recomendacao(){
+    int id_evento = -1;
+    for (int i = 0; i < num_eventos; i++) {
+        for (int j = 0; j < eventos[i].max_lotacao; j++) {
+            if (eventos[i].lugares[j] == VAZIO){
+                id_evento = i;
+                break;
+            }
+            if (id_evento != -1){
+                break;
+            }
+        }
+    }
+    return id_evento;
 }
