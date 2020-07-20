@@ -132,7 +132,7 @@ int main() {
     }
 
     for (int i = 0; i < num_eventos; ++i) {
-        for (int j = 0; j < eventos[i].max_lotacao; ++j) {
+        for (int j = 0; j < eventos[i].max_clientes_gerar; ++j) {
             pthread_join(tids[i][j], NULL);
         }
     }
