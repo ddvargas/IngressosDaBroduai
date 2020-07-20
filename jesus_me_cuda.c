@@ -12,8 +12,8 @@
 #include <stdbool.h>
 
 #define TAM_BUFFER_FILE 255
-#define MAX_SLEEP_SOLICITAR_INGRESSO 20
-#define MAX_SLEEP_AUTORIZACAO_PAGAMENTO 20
+#define MAX_SLEEP_SOLICITAR_INGRESSO 2
+#define MAX_SLEEP_AUTORIZACAO_PAGAMENTO 2
 
 enum estado_lugar {
     VENDIDO, VAZIO, EM_COMPRA
@@ -175,21 +175,46 @@ int get_randon(int max_value) {
  */
 void *thread_cliente(void *args) {
     ARG *targ = (ARG *) args;
+    int meu_lugar_evento;
+    printf("Thread %d evento %d lançada\n", targ->id_thread, targ->id_evento);
+    fprintf(trace, "Thread %d evento %d lançada\n", targ->id_thread, targ->id_evento);
 
-    //solicitar um ingresso
-    //se tem lugar no espetáculo
-    //sleep(get_ramdom(MAX_SLEEP))
-    //efetuar o pagamento
-    //aguardar atorização da operadora do cartão
-    //se autorizada
-    //confirmar compra no evento (setar como vendido o lugar)
-    //senão liberar lugar
-    //senão recomendar outro espetaculo
-    //se cliente quiser outro espetáculo
-    //trocar id da thread para iniciar o processo de compra novamente em outro evento
+    meu_lugar_evento = solicitar_ingresso(targ->id_evento);
+    printf("Cliente %d do evento %d solicitou lugar %d no evento\n",
+           targ->id_thread, targ->id_evento, meu_lugar_evento);
+    fprintf(trace, "Cliente %d do evento %d solicitou lugar %d no evento\n",
+            targ->id_thread, targ->id_evento, meu_lugar_evento);
 
-    sleep(get_randon(10));
-    printf("Thread cliente %d do evento %d processada\n", targ->id_thread, targ->id_evento);
+    if (meu_lugar_evento >= 0) {
+        sleep(MAX_SLEEP_SOLICITAR_INGRESSO);
+        if (autorizar_pagamento()) {
+            printf("Pagamento da compra do cliente %d do evento %d no lugar %d foi autorizada\n",
+                   targ->id_thread, targ->id_evento, meu_lugar_evento);
+            fprintf(trace, "Pagamento da compra do cliente %d do evento %d no lugar %d foi autorizada\n",
+                    targ->id_thread, targ->id_evento, meu_lugar_evento);
+            if (confirmar_compra_evento(targ->id_evento, meu_lugar_evento)) {
+                printf("Compra do cliente %d no evento %d confirmada no lugar %d\n", targ->id_thread,
+                       targ->id_evento, meu_lugar_evento);
+                fprintf(trace, "Compra do cliente %d no evento %d confirmada no lugar %d\n", targ->id_thread,
+                        targ->id_evento, meu_lugar_evento);
+            } else {
+                printf("\"Compra do cliente %d no evento %d confirmada no lugar %d\n", targ->id_thread,
+                       targ->id_evento, meu_lugar_evento);
+                fprintf(trace, "Compra do cliente %d no evento %d confirmada no lugar %d\n", targ->id_thread,
+                        targ->id_evento, meu_lugar_evento);
+            }
+        } else {
+            printf("Pagamento da compra do cliente %d do evento %d no lugar %d não autorizada\n",
+                   targ->id_thread, targ->id_evento, meu_lugar_evento);
+            liberar_lugar(targ->id_evento, meu_lugar_evento);
+        }
+    } else {
+        printf("Recomendar outro espetáculo\n");
+        //recomendar outro espetáculo
+        //se cliente quiser outro espetáculo
+        //trocar id da thread para iniciar o processo de compra novamente em outro evento? (recursividade)
+    }
+
     fprintf(trace, "Thread cliente %d do evento %d processada\n", targ->id_thread, targ->id_evento);
 
     free(args);
@@ -205,9 +230,11 @@ int solicitar_ingresso(int id_evento) {
     int retorno = -1;
     if (id_evento >= 0) {
         sem_wait(&eventos[id_evento].mutext);
-        for (int i = 0; i < eventos[id_evento].max_lotacao; ++i) {
+        for (int i = 0; i < eventos[id_evento].max_lotacao; i++) {
             if (eventos[id_evento].lugares[i] == VAZIO) {
+                eventos[id_evento].lugares[i] = EM_COMPRA;
                 retorno = i;
+                break;
             }
         }
         sem_post(&eventos[id_evento].mutext);
@@ -222,7 +249,7 @@ int solicitar_ingresso(int id_evento) {
  */
 bool autorizar_pagamento() {
     sleep(get_randon(MAX_SLEEP_AUTORIZACAO_PAGAMENTO));
-    if (get_randon(1) == 1) {
+    if (get_randon(2) == 1) {
         return true;
     }
     return false;
