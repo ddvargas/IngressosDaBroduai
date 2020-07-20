@@ -48,9 +48,11 @@ int solicitar_ingresso(int id_evento);
 
 bool autorizar_pagamento();
 
-bool confirmar_compra_evento(int id_evento, int id_lugar)
+bool confirmar_compra_evento(int id_evento, int id_lugar);
 
-        int main() {
+void liberar_lugar(int id_evento, int id_lugar);
+
+int main() {
     FILE *input;
     int num_eventos = 0, max_clientes = 0;
     char buffer_read_input[TAM_BUFFER_FILE];
@@ -244,4 +246,17 @@ bool confirmar_compra_evento(int id_evento, int id_lugar) {
     }
     sem_post(&eventos[id_evento].mutext);
     return retorno;
+}
+
+/**
+ * Libera um lugar em um evento marcando o como VAZIO
+ * @param id_evento que se quer liberar o lugar
+ * @param id_lugar que se quer liberar
+ */
+void liberar_lugar(int id_evento, int id_lugar) {
+    if (id_evento >= 0 && id_lugar >= 0) {
+        sem_wait(&eventos[id_evento].mutext);
+        eventos[id_evento].lugares[id_lugar] = VAZIO;
+        sem_post(&eventos[id_evento].mutext);
+    }
 }
