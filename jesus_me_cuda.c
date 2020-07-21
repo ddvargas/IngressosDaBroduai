@@ -12,8 +12,8 @@
 #include <stdbool.h>
 
 #define TAM_BUFFER_FILE 255
-#define MAX_SLEEP_SOLICITAR_INGRESSO 5
-#define MAX_SLEEP_AUTORIZACAO_PAGAMENTO 5
+#define MAX_SLEEP_SOLICITAR_INGRESSO 2
+#define MAX_SLEEP_AUTORIZACAO_PAGAMENTO 2
 
 enum estado_lugar {
     VENDIDO, VAZIO, EM_COMPRA
@@ -146,6 +146,9 @@ int main() {
 
     fclose(input);
     fclose(trace);
+    for (int k = 0; k < num_eventos; ++k) {
+        free(eventos[k].lugares);
+    }
     free(eventos);
     exit(0);
 }
@@ -181,8 +184,6 @@ void *thread_cliente(void *args) {
 
 
     if (meu_lugar_evento >= 0) {
-        bool pagamento;
-
         printf("INFO - Cliente %d do evento %d solicitou lugar %d no evento\n",
                targ->id_thread, targ->id_evento, meu_lugar_evento);
         fprintf(trace, "INFO - Cliente %d do evento %d solicitou lugar %d no evento\n",
@@ -195,26 +196,26 @@ void *thread_cliente(void *args) {
         fprintf(trace, "INFO - Cliente %d do evento %d aguardando autorização de pagamento\n",
                 targ->id_thread, targ->id_evento);
 
-        pagamento = autorizar_pagamento();
-        if (pagamento) {
-            printf("PAGAMENTO ACEITE - Pagamento da compra do cliente %d do evento %d no lugar %d foi autorizada\n",
+        if (autorizar_pagamento()) {
+            printf("PAGAMENTO CONFIRMADO - Pagamento da compra do cliente %d do evento %d no lugar %d foi autorizada\n",
                    targ->id_thread, targ->id_evento, meu_lugar_evento);
             fprintf(trace,
-                    "PAGAMENTO ACEITE - Pagamento da compra do cliente %d do evento %d no lugar %d foi autorizada\n",
+                    "PAGAMENTO CONFIRMADO - Pagamento da compra do cliente %d do evento %d no lugar %d foi autorizada\n",
                     targ->id_thread, targ->id_evento, meu_lugar_evento);
 
 
             if (confirmar_compra_evento(targ->id_evento, meu_lugar_evento)) {
-                printf("COMPRA ACEITE - Compra do cliente %d no evento %d confirmada no lugar %d\n", targ->id_thread,
+                printf("COMPRA CONFIRMADA - Compra do cliente %d no evento %d confirmada no lugar %d\n",
+                       targ->id_thread,
                        targ->id_evento, meu_lugar_evento);
-                fprintf(trace, "COMPRA ACEITE - Compra do cliente %d no evento %d confirmada no lugar %d\n",
+                fprintf(trace, "COMPRA CONFIRMADA - Compra do cliente %d no evento %d confirmada no lugar %d\n",
                         targ->id_thread,
                         targ->id_evento, meu_lugar_evento);
             } else {
-                printf("COMPRA RECUSA - Compra do cliente %d no evento %d não confirmada no lugar %d\n",
+                printf("COMPRA RECUSADA - Compra do cliente %d no evento %d não confirmada no lugar %d\n",
                        targ->id_thread,
                        targ->id_evento, meu_lugar_evento);
-                fprintf(trace, "COMPRA RECUSA - Compra do cliente %d no evento %d não confirmada no lugar %d\n",
+                fprintf(trace, "COMPRA RECUSADA - Compra do cliente %d no evento %d não confirmada no lugar %d\n",
                         targ->id_thread,
                         targ->id_evento, meu_lugar_evento);
 
@@ -222,7 +223,7 @@ void *thread_cliente(void *args) {
             }
 
         } else {
-            printf("PAGAMENTO RECUSA - Pagamento da compra do cliente %d do evento %d no lugar %d não autorizada\n",
+            printf("PAGAMENTO RECUSADO - Pagamento da compra do cliente %d do evento %d no lugar %d não autorizada\n",
                    targ->id_thread, targ->id_evento, meu_lugar_evento);
 
             liberar_lugar(targ->id_evento, meu_lugar_evento);
@@ -234,9 +235,9 @@ void *thread_cliente(void *args) {
 
         if (new_id_evento >= 0){
             if (get_randon(1)) {
-                printf("RECOMENDACAO ACEITE - Cliente %d aceitou recomendação do evento %s\n",
+                printf("RECOMENDACAO SEGUIDA - Cliente %d aceitou recomendação do evento %s\n",
                        targ->id_thread, eventos[new_id_evento].nome);
-                fprintf(trace, "RECOMENDACAO ACEITE - Cliente %d aceitou recomendação do evento %s\n",
+                fprintf(trace, "RECOMENDACAO SEGUIDA - Cliente %d aceitou recomendação do evento %s\n",
                         targ->id_thread, eventos[new_id_evento].nome);
 
                 ARG *new_arg = (ARG *) malloc(sizeof(ARG));
@@ -245,9 +246,9 @@ void *thread_cliente(void *args) {
                 pthread_create(&tid, NULL, thread_cliente, (void *) new_arg);
                 pthread_join(tid, 0);
             } else {
-                printf("RECOMENDACAO RECUSA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
+                printf("RECOMENDACAO IGNORADA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
                        targ->id_thread, targ->id_evento, eventos[new_id_evento].nome);
-                fprintf(trace, "RECOMENDACAO RECUSA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
+                fprintf(trace, "RECOMENDACAO IGNORADA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
                         targ->id_evento, targ->id_evento, eventos[new_id_evento].nome);
             }
         }
@@ -305,7 +306,7 @@ bool confirmar_compra_evento(int id_evento, int id_lugar) {
     }
     bool retorno = false;
     sem_wait(&eventos[id_evento].mutex);
-    if (eventos[id_evento].lugares[id_lugar] == EM_COMPRA) {
+    if (eventos[id_evento].lugares[id_lugar] != VENDIDO) {
         eventos[id_evento].lugares[id_lugar] = VENDIDO;
         retorno = true;
     }
@@ -321,7 +322,9 @@ bool confirmar_compra_evento(int id_evento, int id_lugar) {
 void liberar_lugar(int id_evento, int id_lugar) {
     if (id_evento >= 0 && id_lugar >= 0) {
         sem_wait(&eventos[id_evento].mutex);
-        eventos[id_evento].lugares[id_lugar] = VAZIO;
+        if (eventos[id_evento].lugares[id_lugar] != VAZIO) {
+            eventos[id_evento].lugares[id_lugar] = VAZIO;
+        }
         sem_post(&eventos[id_evento].mutex);
     }
 }
@@ -333,7 +336,6 @@ void liberar_lugar(int id_evento, int id_lugar) {
 int recomendacao(){
     int id_evento = -1, max_lotacao;
     for (int i = 0; i < num_eventos; i++) {
-//        max_lotacao = get_max_lotacao(i);
         for (int j = 0; j < eventos[i].max_lotacao; j++) {
             if (eventos[i].lugares[j] == VAZIO){
                 id_evento = i;
@@ -358,25 +360,25 @@ void relatorio(){
         printf("Evento: %s\nLugares: ", eventos[i].nome);
         fprintf(trace, "Evento: %s\nLugares: ", eventos[i].nome);
         for (int j = 0; j < eventos[i].max_lotacao; j++) {
-            switch (eventos[i].lugares[i]) {
+            switch (eventos[i].lugares[j]) {
                 case VENDIDO:
                     vendidos++;
-                    printf("[%d]:VENDIDO ", j);
-                    fprintf(trace,"[%d]:VENDIDO ", j);
+                    printf("[%d]:VENDIDO  ", j);
+                    fprintf(trace, "[%d]:VENDIDO  ", j);
                     break;
                 case VAZIO:
-                    printf("[%d]:VAZIO ", j);
-                    fprintf(trace,"[%d]:VAZIO ", j);
+                    printf("[%d]:VAZIO  ", j);
+                    fprintf(trace, "[%d]:VAZIO  ", j);
                     break;
                 case EM_COMPRA:
-                    printf("[%d]:EM_COMPRA ", j);
-                    fprintf(trace, "[%d]:EM_COMPRA ", j);
+                    printf("[%d]:EM_COMPRA  ", j);
+                    fprintf(trace, "[%d]:EM_COMPRA  ", j);
                     break;
             }
         }
-        printf("\n(%d/%d) vendidos - R$%.2f\n",
-                vendidos, eventos[i].max_lotacao, (vendidos*eventos[i].valor_ingresso));
-        fprintf(trace, "\n(%d/%d) vendidos - R$%.2f\n",
-                vendidos, eventos[i].max_lotacao, (vendidos*eventos[i].valor_ingresso));
+        printf("\n(%d/%d) vendidos - R$%.2f\n\n",
+               vendidos, eventos[i].max_lotacao, (vendidos * eventos[i].valor_ingresso));
+        fprintf(trace, "\n(%d/%d) vendidos - R$%.2f\n\n",
+                vendidos, eventos[i].max_lotacao, (vendidos * eventos[i].valor_ingresso));
     }
 }
