@@ -20,13 +20,12 @@ enum estado_lugar {
 } typedef STATUS;
 
 struct evento {
-    int id;
     char nome[100];
     short unsigned int max_lotacao;
     float valor_ingresso;
     int max_clientes_gerar;
     STATUS *lugares;
-    sem_t mutext;
+    sem_t mutex;
 } typedef EVENTO;
 
 struct thread_arg {
@@ -36,7 +35,6 @@ struct thread_arg {
 
 FILE *trace;
 EVENTO *eventos;
-sem_t mutex; //mutex para realocações de memoria
 int num_eventos = 0;
 
 
@@ -83,7 +81,6 @@ int main() {
     //processamento
     fprintf(trace,"Lendo arquivo de input\n");
     srand(time(NULL));
-    sem_init(&mutex, 0, 1);
     while (fgets(buffer_read_input, TAM_BUFFER_FILE, input)) {
         if (buffer_read_input[0] != '\n'){
             linha = strtok(buffer_read_input, "|");
@@ -101,7 +98,6 @@ int main() {
             if (max_clientes < max_cli) {
                 max_clientes = max_cli;
             }
-            eventos[num_eventos - 1].id = num_eventos - 1;
         }
     }
     fprintf(trace, "Leitura arquivo input terminada\n");
@@ -110,7 +106,7 @@ int main() {
     for (int i = 0; i < num_eventos; i++) {
         fprintf(trace, "Inicializando evento %d", i);
         printf("Inicializando evento %d\n", i);
-        sem_init(&(eventos[i].mutext), 0, 1);
+        sem_init(&(eventos[i].mutex), 0, 1);
 
         fprintf(trace, "Alocando memória para vetor de lugares do evento %d - Tamanho %d\n", i, eventos[i].max_lotacao);
         printf("Alocando memória para vetor de lugares do evento %d - Tamanho %d\n", i, eventos[i].max_lotacao);
@@ -241,7 +237,7 @@ int solicitar_ingresso(int id_evento) {
     int retorno = -1;
     if (id_evento >= 0) {
 //        int max_lotacao_evento = get_max_lotacao(id_evento);
-        sem_wait(&eventos[id_evento].mutext);
+        sem_wait(&eventos[id_evento].mutex);
         for (int i = 0; i < eventos[i].max_lotacao; i++) {
             if (eventos[id_evento].lugares[i] == VAZIO) {
                 eventos[id_evento].lugares[i] = EM_COMPRA;
@@ -249,7 +245,7 @@ int solicitar_ingresso(int id_evento) {
                 break;
             }
         }
-        sem_post(&eventos[id_evento].mutext);
+        sem_post(&eventos[id_evento].mutex);
         return retorno;
     }
     return -2;
@@ -278,12 +274,12 @@ bool confirmar_compra_evento(int id_evento, int id_lugar) {
         return false;
     }
     bool retorno = false;
-    sem_wait(&eventos[id_evento].mutext);
+    sem_wait(&eventos[id_evento].mutex);
     if (eventos[id_evento].lugares[id_lugar] == EM_COMPRA) {
         eventos[id_evento].lugares[id_lugar] = VENDIDO;
         retorno = true;
     }
-    sem_post(&eventos[id_evento].mutext);
+    sem_post(&eventos[id_evento].mutex);
     return retorno;
 }
 
@@ -294,9 +290,9 @@ bool confirmar_compra_evento(int id_evento, int id_lugar) {
  */
 void liberar_lugar(int id_evento, int id_lugar) {
     if (id_evento >= 0 && id_lugar >= 0) {
-        sem_wait(&eventos[id_evento].mutext);
+        sem_wait(&eventos[id_evento].mutex);
         eventos[id_evento].lugares[id_lugar] = VAZIO;
-        sem_post(&eventos[id_evento].mutext);
+        sem_post(&eventos[id_evento].mutex);
     }
 }
 
@@ -327,7 +323,6 @@ int recomendacao(){
 void relatorio(){
     printf("\n######## Relatório ########\n");
     fprintf(trace, "\n######## Relatório ########\n");
-    int num ;
     for (int i = 0; i < num_eventos; i++) {
         int vendidos = 0;
         printf("Evento: %s\nLugares: ", eventos[i].nome);
