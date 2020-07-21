@@ -155,7 +155,7 @@ int get_randon(int max_value) {
     if (max_value <= 0) {
         return 0;
     }
-    return rand() % max_value;
+    return rand() % (max_value + 1);
 }
 
 /**
@@ -205,17 +205,18 @@ void *thread_cliente(void *args) {
         pthread_t tid;
 
         if (new_id_evento >= 0){
-            if (get_randon(2)){
+            if (get_randon(1)) {
                 printf("Cliente %d aceitou recomendação do evento %s\n",
-                        targ->id_thread, eventos[new_id_evento].nome);
-                ARG *new_arg = (ARG*) malloc(sizeof(ARG));
+                       targ->id_thread, eventos[new_id_evento].nome);
+                ARG *new_arg = (ARG *) malloc(sizeof(ARG));
                 new_arg->id_thread = targ->id_thread;
                 new_arg->id_evento = new_id_evento;
-                printf("Thread %d do evento %d lança thread para o evento %d\n", targ->id_thread, targ->id_evento, new_arg->id_evento);
-                pthread_create(&tid, NULL, thread_cliente, (void*) new_arg);
+                printf("Thread %d do evento %d lança thread para o evento %d\n", targ->id_thread, targ->id_evento,
+                       new_arg->id_evento);
+                pthread_create(&tid, NULL, thread_cliente, (void *) new_arg);
                 pthread_join(tid, 0);
 //                thread_cliente((void*) new_arg);
-            } else{
+            } else {
                 printf("RECUSA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
                         targ->id_evento, targ->id_evento, eventos[new_id_evento].nome);
             }
@@ -257,7 +258,7 @@ int solicitar_ingresso(int id_evento) {
  */
 bool autorizar_pagamento() {
     sleep(get_randon(MAX_SLEEP_AUTORIZACAO_PAGAMENTO));
-    if (get_randon(2) == 1) {
+    if (get_randon(1)) {
         return true;
     }
     return false;
