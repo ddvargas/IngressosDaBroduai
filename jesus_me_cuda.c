@@ -22,11 +22,11 @@ enum estado_lugar {
 struct evento {
     int id;
     char nome[100];
-    int max_lotacao;
+    short unsigned int max_lotacao;
     float valor_ingresso;
     int max_clientes_gerar;
     STATUS *lugares;
-    sem_t mutext, empty, full;
+    sem_t mutext;
 } typedef EVENTO;
 
 struct thread_arg {
@@ -39,7 +39,6 @@ EVENTO *eventos;
 sem_t mutex; //mutex para realocações de memoria
 int num_eventos = 0;
 
-void write_trace(char message[]);
 
 int get_randon(int max_value);
 
@@ -55,6 +54,7 @@ void liberar_lugar(int id_evento, int id_lugar);
 
 int recomendacao();
 
+void relatorio();
 
 
 int main() {
@@ -81,84 +81,73 @@ int main() {
 
 
     //processamento
-    write_trace("Lendo arquivo de input\n");
+    fprintf(trace,"Lendo arquivo de input\n");
     srand(time(NULL));
     sem_init(&mutex, 0, 1);
-    while (!feof(input)) {
-        fgets(buffer_read_input, TAM_BUFFER_FILE, input);
-        linha = strtok(buffer_read_input, "|");
-        eventos = (EVENTO *) realloc(eventos, ++num_eventos);
-        //para cada linha, extrair os parâmetros
-        strcpy(eventos[num_eventos - 1].nome, linha);
-        linha = strtok(NULL, "|");
-        eventos[num_eventos - 1].max_lotacao = atoi(linha);
+    while (fgets(buffer_read_input, TAM_BUFFER_FILE, input)) {
+        if (buffer_read_input[0] != '\n'){
+            linha = strtok(buffer_read_input, "|");
+            eventos = (EVENTO *) realloc(eventos, sizeof(EVENTO) * ++num_eventos);
+            //para cada linha, extrair os parâmetros
+            strcpy(eventos[num_eventos - 1].nome, linha);
+            linha = strtok(NULL, "|");
+            eventos[num_eventos - 1].max_lotacao = atoi(linha);
 
-        linha = strtok(NULL, "|");
-        eventos[num_eventos - 1].valor_ingresso = atof(linha);
-        linha = strtok(NULL, "|");
-        int max_cli = atoi(linha);
-        eventos[num_eventos - 1].max_clientes_gerar = max_cli;
-        if (max_clientes < max_cli) {
-            max_clientes = max_cli;
+            linha = strtok(NULL, "|");
+            eventos[num_eventos - 1].valor_ingresso = atof(linha);
+            linha = strtok(NULL, "|");
+            int max_cli = atoi(linha);
+            eventos[num_eventos - 1].max_clientes_gerar = max_cli;
+            if (max_clientes < max_cli) {
+                max_clientes = max_cli;
+            }
+            eventos[num_eventos - 1].id = num_eventos - 1;
         }
-        eventos[num_eventos - 1].id = num_eventos - 1;
     }
-    write_trace("Leitura arquivo input terminada\n");
+    fprintf(trace, "Leitura arquivo input terminada\n");
 
     pthread_t tids[num_eventos][max_clientes];
     for (int i = 0; i < num_eventos; i++) {
         fprintf(trace, "Inicializando evento %d", i);
         printf("Inicializando evento %d\n", i);
         sem_init(&(eventos[i].mutext), 0, 1);
-        sem_init(&(eventos[i].empty), 0, eventos[i].max_lotacao);
-        sem_init(&(eventos[i].full), 0, 0);
 
         fprintf(trace, "Alocando memória para vetor de lugares do evento %d - Tamanho %d\n", i, eventos[i].max_lotacao);
         printf("Alocando memória para vetor de lugares do evento %d - Tamanho %d\n", i, eventos[i].max_lotacao);
         eventos[i].lugares = (STATUS *) malloc(sizeof(STATUS) * eventos[i].max_lotacao);
 
-        for (int j = 0; j < eventos[i].max_lotacao; ++j) {
+        for (int j = 0; j < eventos[i].max_lotacao; j++) {
             eventos[i].lugares[j] = VAZIO;
             printf("Evento[%d][%d]: %d\n", i, j, eventos[i].lugares[j]);
         }
     }
-    fprintf("Num eventos: %d\n", num_eventos);
+    fprintf(trace, "Num eventos: %d\n", num_eventos);
     printf("Num eventos: %d\n", num_eventos);
     for (int i = 0; i < num_eventos; i++) {
-        for (int j = 0; j < eventos[i].max_clientes_gerar; ++j) {
+        for (int j = 0; j < eventos[i].max_clientes_gerar; j++) {
             args = (ARG *) malloc(sizeof(ARG));
             args->id_evento = i;
             args->id_thread = j;
             if (pthread_create(&tids[i][j], NULL, thread_cliente, (void *) args)) {
                 printf("ERRO ao criar thread %d para evento %d", j, i);
-                fprintf("ERRO ao criar thread %d para evento %d", j, i);
+                fprintf(trace, "ERRO ao criar thread %d para evento %d", j, i);
             }
         }
     }
 
-    for (int i = 0; i < num_eventos; ++i) {
-        for (int j = 0; j < eventos[i].max_clientes_gerar; ++j) {
-            pthread_join(tids[i][j], NULL);
+    for (int i = 0; i < num_eventos; i++) {
+        for (int j = 0; j < eventos[i].max_clientes_gerar; j++) {
+            pthread_join(tids[i][j], 0);
         }
     }
 
+    relatorio();
     fprintf(trace, "Execução finalizada\n\n");
 
     fclose(input);
     fclose(trace);
+    free(eventos);
     exit(0);
-}
-
-/**
- * Escreve no arquivo de trace a mesaagem passada
- * @param trace arquivo de escrita
- * @param message
- */
-void write_trace(char message[]) {
-    //TODO: modificar para que o trace seja global e a função só receba a mensagem
-    if (trace != NULL && message != NULL) {
-        fprintf(trace, message);
-    }
 }
 
 /**
@@ -207,6 +196,7 @@ void *thread_cliente(void *args) {
                        targ->id_evento, meu_lugar_evento);
                 fprintf(trace, "Compra do cliente %d no evento %d confirmada no lugar %d\n", targ->id_thread,
                         targ->id_evento, meu_lugar_evento);
+                liberar_lugar(targ->id_evento, meu_lugar_evento);
             }
         } else {
             printf("Pagamento da compra do cliente %d do evento %d no lugar %d não autorizada\n",
@@ -214,27 +204,32 @@ void *thread_cliente(void *args) {
             liberar_lugar(targ->id_evento, meu_lugar_evento);
         }
     } else {
-        printf("Recomendar outro espetáculo\n");
         //recomendar outro espetáculo
         int new_id_evento = recomendacao();
-        printf("");
+        pthread_t tid;
+
         if (new_id_evento >= 0){
             if (get_randon(2)){
-                printf("######### Cliente %d aceitou recomendação do evento %s\n",
+                printf("Cliente %d aceitou recomendação do evento %s\n",
                         targ->id_thread, eventos[new_id_evento].nome);
                 ARG *new_arg = (ARG*) malloc(sizeof(ARG));
                 new_arg->id_thread = targ->id_thread;
                 new_arg->id_evento = new_id_evento;
-                thread_cliente((void*) new_arg);
+                printf("Thread %d do evento %d lança thread para o evento %d\n", targ->id_thread, targ->id_evento, new_arg->id_evento);
+                pthread_create(&tid, NULL, thread_cliente, (void*) new_arg);
+                pthread_join(tid, 0);
+//                thread_cliente((void*) new_arg);
+            } else{
+                printf("RECUSA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
+                        targ->id_evento, targ->id_evento, eventos[new_id_evento].nome);
             }
         }
-
     }
 
     fprintf(trace, "Thread cliente %d do evento %d processada\n", targ->id_thread, targ->id_evento);
 
     free(args);
-    pthread_exit(NULL);
+    pthread_exit(0);
 }
 
 /**
@@ -245,8 +240,9 @@ void *thread_cliente(void *args) {
 int solicitar_ingresso(int id_evento) {
     int retorno = -1;
     if (id_evento >= 0) {
+//        int max_lotacao_evento = get_max_lotacao(id_evento);
         sem_wait(&eventos[id_evento].mutext);
-        for (int i = 0; i < eventos[id_evento].max_lotacao; i++) {
+        for (int i = 0; i < eventos[i].max_lotacao; i++) {
             if (eventos[id_evento].lugares[i] == VAZIO) {
                 eventos[id_evento].lugares[i] = EM_COMPRA;
                 retorno = i;
@@ -304,10 +300,14 @@ void liberar_lugar(int id_evento, int id_lugar) {
     }
 }
 
-
+/**
+ * Sistema de recomendação de um evento
+ * @return id do evento recomendado, senão retorna -1.
+ */
 int recomendacao(){
-    int id_evento = -1;
+    int id_evento = -1, max_lotacao;
     for (int i = 0; i < num_eventos; i++) {
+//        max_lotacao = get_max_lotacao(i);
         for (int j = 0; j < eventos[i].max_lotacao; j++) {
             if (eventos[i].lugares[j] == VAZIO){
                 id_evento = i;
@@ -319,4 +319,39 @@ int recomendacao(){
         }
     }
     return id_evento;
+}
+
+/**
+ * Imprime o relatório da execução
+ */
+void relatorio(){
+    printf("\n######## Relatório ########\n");
+    fprintf(trace, "\n######## Relatório ########\n");
+    int num ;
+    for (int i = 0; i < num_eventos; i++) {
+        int vendidos = 0;
+        printf("Evento: %s\nLugares: ", eventos[i].nome);
+        fprintf(trace, "Evento: %s\nLugares: ", eventos[i].nome);
+        for (int j = 0; j < eventos[i].max_lotacao; j++) {
+            switch (eventos[i].lugares[i]) {
+                case VENDIDO:
+                    vendidos++;
+                    printf("[%d]:VENDIDO ", j);
+                    fprintf(trace,"[%d]:VENDIDO ", j);
+                    break;
+                case VAZIO:
+                    printf("[%d]:VAZIO ", j);
+                    fprintf(trace,"[%d]:VAZIO ", j);
+                    break;
+                case EM_COMPRA:
+                    printf("[%d]:EM_COMPRA ", j);
+                    fprintf(trace, "[%d]:EM_COMPRA ", j);
+                    break;
+            }
+        }
+        printf("\n(%d/%d) vendidos - R$%.2f\n",
+                vendidos, eventos[i].max_lotacao, (vendidos*eventos[i].valor_ingresso));
+        fprintf(trace, "\n(%d/%d) vendidos - R$%.2f\n",
+                vendidos, eventos[i].max_lotacao, (vendidos*eventos[i].valor_ingresso));
+    }
 }
