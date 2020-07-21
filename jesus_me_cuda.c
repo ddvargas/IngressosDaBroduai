@@ -12,8 +12,8 @@
 #include <stdbool.h>
 
 #define TAM_BUFFER_FILE 255
-#define MAX_SLEEP_SOLICITAR_INGRESSO 2
-#define MAX_SLEEP_AUTORIZACAO_PAGAMENTO 2
+#define MAX_SLEEP_SOLICITAR_INGRESSO 5
+#define MAX_SLEEP_AUTORIZACAO_PAGAMENTO 5
 
 enum estado_lugar {
     VENDIDO, VAZIO, EM_COMPRA
@@ -66,11 +66,11 @@ int main() {
     trace = fopen("trace.txt", "a");
 
     if (input == NULL) {
-        printf("Erro ao abrir arquivo de input\n");
+        printf("ERRO ao abrir arquivo de input\n");
         exit(1);
     }
     if (trace == NULL) {
-        printf("Erro ao abrir arquivo de trace\n");
+        printf("ERRO ao abrir arquivo de trace\n");
         exit(1);
     }
 
@@ -79,10 +79,11 @@ int main() {
 
 
     //processamento
-    fprintf(trace,"Lendo arquivo de input\n");
+    fprintf(trace, "INFO - Lendo arquivo de input\n");
+    printf("INFO - Lendo arquivo de input\n");
     srand(time(NULL));
     while (fgets(buffer_read_input, TAM_BUFFER_FILE, input)) {
-        if (buffer_read_input[0] != '\n'){
+        if (buffer_read_input[0] != '\n') {
             linha = strtok(buffer_read_input, "|");
             eventos = (EVENTO *) realloc(eventos, sizeof(EVENTO) * ++num_eventos);
             //para cada linha, extrair os parâmetros
@@ -100,16 +101,16 @@ int main() {
             }
         }
     }
-    fprintf(trace, "Leitura arquivo input terminada\n");
+    fprintf(trace, "INFO - Leitura arquivo input terminada\n");
+    printf("INFO - Leitura arquivo input terminada\n");
 
     pthread_t tids[num_eventos][max_clientes];
     for (int i = 0; i < num_eventos; i++) {
-        fprintf(trace, "Inicializando evento %d", i);
-        printf("Inicializando evento %d\n", i);
+        fprintf(trace, "INFO - Inicializando evento %d", i);
+        printf("INFO - Inicializando evento %d\n", i);
         sem_init(&(eventos[i].mutex), 0, 1);
 
-        fprintf(trace, "Alocando memória para vetor de lugares do evento %d - Tamanho %d\n", i, eventos[i].max_lotacao);
-        printf("Alocando memória para vetor de lugares do evento %d - Tamanho %d\n", i, eventos[i].max_lotacao);
+        printf("INFO - Alocando memória para vetor de lugares do evento %d (tamanho %d)\n", i, eventos[i].max_lotacao);
         eventos[i].lugares = (STATUS *) malloc(sizeof(STATUS) * eventos[i].max_lotacao);
 
         for (int j = 0; j < eventos[i].max_lotacao; j++) {
@@ -117,16 +118,18 @@ int main() {
             printf("Evento[%d][%d]: %d\n", i, j, eventos[i].lugares[j]);
         }
     }
-    fprintf(trace, "Num eventos: %d\n", num_eventos);
-    printf("Num eventos: %d\n", num_eventos);
+    fprintf(trace, "INFO - Num eventos: %d\n", num_eventos);
+    printf("INFO - Num eventos: %d\n", num_eventos);
+    fprintf(trace, "INFO - Lançando threads\n");
+    printf("INFO - Lançando threads\n");
     for (int i = 0; i < num_eventos; i++) {
         for (int j = 0; j < eventos[i].max_clientes_gerar; j++) {
             args = (ARG *) malloc(sizeof(ARG));
             args->id_evento = i;
             args->id_thread = j;
             if (pthread_create(&tids[i][j], NULL, thread_cliente, (void *) args)) {
-                printf("ERRO ao criar thread %d para evento %d", j, i);
-                fprintf(trace, "ERRO ao criar thread %d para evento %d", j, i);
+                printf("ERRO - ao criar thread %d para evento %d", j, i);
+                fprintf(trace, "ERRO - ao criar thread %d para evento %d", j, i);
             }
         }
     }
@@ -137,8 +140,9 @@ int main() {
         }
     }
 
+    fprintf(trace, "INFO - Execução finalizada\n");
+    printf("INFO - Execução finalizada\n");
     relatorio();
-    fprintf(trace, "Execução finalizada\n\n");
 
     fclose(input);
     fclose(trace);
@@ -166,37 +170,61 @@ int get_randon(int max_value) {
 void *thread_cliente(void *args) {
     ARG *targ = (ARG *) args;
     int meu_lugar_evento;
-    printf("Thread %d evento %d lançada\n", targ->id_thread, targ->id_evento);
-    fprintf(trace, "Thread %d evento %d lançada\n", targ->id_thread, targ->id_evento);
+    targ->id_thread = pthread_self(); //recuperação do ID único da thread
+
+    printf("INFO - Cliente %d solicitando ingresso no evento %s\n",
+           targ->id_thread, eventos[targ->id_evento].nome);
+    fprintf(trace, "INFO - Cliente %d solicitando ingresso no evento %s\n",
+            targ->id_thread, eventos[targ->id_evento].nome);
 
     meu_lugar_evento = solicitar_ingresso(targ->id_evento);
-    printf("Cliente %d do evento %d solicitou lugar %d no evento\n",
-           targ->id_thread, targ->id_evento, meu_lugar_evento);
-    fprintf(trace, "Cliente %d do evento %d solicitou lugar %d no evento\n",
-            targ->id_thread, targ->id_evento, meu_lugar_evento);
+
 
     if (meu_lugar_evento >= 0) {
+        bool pagamento;
+
+        printf("INFO - Cliente %d do evento %d solicitou lugar %d no evento\n",
+               targ->id_thread, targ->id_evento, meu_lugar_evento);
+        fprintf(trace, "INFO - Cliente %d do evento %d solicitou lugar %d no evento\n",
+                targ->id_thread, targ->id_evento, meu_lugar_evento);
+
         sleep(MAX_SLEEP_SOLICITAR_INGRESSO);
-        if (autorizar_pagamento()) {
-            printf("Pagamento da compra do cliente %d do evento %d no lugar %d foi autorizada\n",
+
+        printf("INFO - Cliente %d do evento %d aguardando autorização de pagamento\n",
+               targ->id_thread, targ->id_evento);
+        fprintf(trace, "INFO - Cliente %d do evento %d aguardando autorização de pagamento\n",
+                targ->id_thread, targ->id_evento);
+
+        pagamento = autorizar_pagamento();
+        if (pagamento) {
+            printf("PAGAMENTO ACEITE - Pagamento da compra do cliente %d do evento %d no lugar %d foi autorizada\n",
                    targ->id_thread, targ->id_evento, meu_lugar_evento);
-            fprintf(trace, "Pagamento da compra do cliente %d do evento %d no lugar %d foi autorizada\n",
+            fprintf(trace,
+                    "PAGAMENTO ACEITE - Pagamento da compra do cliente %d do evento %d no lugar %d foi autorizada\n",
                     targ->id_thread, targ->id_evento, meu_lugar_evento);
+
+
             if (confirmar_compra_evento(targ->id_evento, meu_lugar_evento)) {
-                printf("Compra do cliente %d no evento %d confirmada no lugar %d\n", targ->id_thread,
+                printf("COMPRA ACEITE - Compra do cliente %d no evento %d confirmada no lugar %d\n", targ->id_thread,
                        targ->id_evento, meu_lugar_evento);
-                fprintf(trace, "Compra do cliente %d no evento %d confirmada no lugar %d\n", targ->id_thread,
+                fprintf(trace, "COMPRA ACEITE - Compra do cliente %d no evento %d confirmada no lugar %d\n",
+                        targ->id_thread,
                         targ->id_evento, meu_lugar_evento);
             } else {
-                printf("\"Compra do cliente %d no evento %d confirmada no lugar %d\n", targ->id_thread,
+                printf("COMPRA RECUSA - Compra do cliente %d no evento %d não confirmada no lugar %d\n",
+                       targ->id_thread,
                        targ->id_evento, meu_lugar_evento);
-                fprintf(trace, "Compra do cliente %d no evento %d confirmada no lugar %d\n", targ->id_thread,
+                fprintf(trace, "COMPRA RECUSA - Compra do cliente %d no evento %d não confirmada no lugar %d\n",
+                        targ->id_thread,
                         targ->id_evento, meu_lugar_evento);
+
                 liberar_lugar(targ->id_evento, meu_lugar_evento);
             }
+
         } else {
-            printf("Pagamento da compra do cliente %d do evento %d no lugar %d não autorizada\n",
+            printf("PAGAMENTO RECUSA - Pagamento da compra do cliente %d do evento %d no lugar %d não autorizada\n",
                    targ->id_thread, targ->id_evento, meu_lugar_evento);
+
             liberar_lugar(targ->id_evento, meu_lugar_evento);
         }
     } else {
@@ -206,24 +234,26 @@ void *thread_cliente(void *args) {
 
         if (new_id_evento >= 0){
             if (get_randon(1)) {
-                printf("Cliente %d aceitou recomendação do evento %s\n",
+                printf("RECOMENDACAO ACEITE - Cliente %d aceitou recomendação do evento %s\n",
                        targ->id_thread, eventos[new_id_evento].nome);
+                fprintf(trace, "RECOMENDACAO ACEITE - Cliente %d aceitou recomendação do evento %s\n",
+                        targ->id_thread, eventos[new_id_evento].nome);
+
                 ARG *new_arg = (ARG *) malloc(sizeof(ARG));
                 new_arg->id_thread = targ->id_thread;
                 new_arg->id_evento = new_id_evento;
-                printf("Thread %d do evento %d lança thread para o evento %d\n", targ->id_thread, targ->id_evento,
-                       new_arg->id_evento);
                 pthread_create(&tid, NULL, thread_cliente, (void *) new_arg);
                 pthread_join(tid, 0);
-//                thread_cliente((void*) new_arg);
             } else {
-                printf("RECUSA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
+                printf("RECOMENDACAO RECUSA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
+                       targ->id_thread, targ->id_evento, eventos[new_id_evento].nome);
+                fprintf(trace, "RECOMENDACAO RECUSA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
                         targ->id_evento, targ->id_evento, eventos[new_id_evento].nome);
             }
         }
     }
 
-    fprintf(trace, "Thread cliente %d do evento %d processada\n", targ->id_thread, targ->id_evento);
+    fprintf(trace, "INFO - Thread cliente %d do evento %d processada\n", targ->id_thread, targ->id_evento);
 
     free(args);
     pthread_exit(0);
@@ -237,7 +267,6 @@ void *thread_cliente(void *args) {
 int solicitar_ingresso(int id_evento) {
     int retorno = -1;
     if (id_evento >= 0) {
-//        int max_lotacao_evento = get_max_lotacao(id_evento);
         sem_wait(&eventos[id_evento].mutex);
         for (int i = 0; i < eventos[i].max_lotacao; i++) {
             if (eventos[id_evento].lugares[i] == VAZIO) {
