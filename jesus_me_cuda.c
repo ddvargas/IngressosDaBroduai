@@ -50,15 +50,17 @@ int get_randon(int max_value);
 
 void *thread_cliente(void *args);
 
-int solicitar_ingresso(int id_evento);
+int solicitar_ingresso(EVENTO *evento);
 
 bool autorizar_pagamento();
 
-bool confirmar_compra_evento(int id_evento, int id_lugar);
+bool confirmar_compra_evento(EVENTO *evento, int id_lugar);
 
-void liberar_lugar(int id_evento, int id_lugar);
+void liberar_lugar(EVENTO *evento, int id_lugar);
 
 int recomendacao();
+
+EVENTO *get_evento(int id_evento);
 
 void relatorio();
 
@@ -191,78 +193,77 @@ int get_randon(int max_value) {
  */
 void *thread_cliente(void *args) {
     ARG *targ = (ARG *) args;
+    EVENTO *meu_evento;
     int meu_lugar_evento;
-    if (targ->id_thread == NULL) {
-        targ->id_thread = (unsigned int) pthread_self(); //recuperação do ID único da thread
+
+    meu_evento = get_evento(targ->id_evento);
+    if (!targ->relancada) {
+        targ->id_thread = (int) pthread_self(); //recuperação do ID único da thread
     }
 
     printf("INFO - Cliente %d solicitando ingresso no evento %s\n",
-           targ->id_thread, eventos[targ->id_evento].nome);
+           targ->id_thread, meu_evento->nome);
     fprintf(trace, "INFO - Cliente %d solicitando ingresso no evento %s\n",
-            targ->id_thread, eventos[targ->id_evento].nome);
+            targ->id_thread, meu_evento->nome);
 
-    meu_lugar_evento = solicitar_ingresso(targ->id_evento);
+    meu_lugar_evento = solicitar_ingresso(meu_evento);
 
 
     if (meu_lugar_evento >= 0) {
-        printf("INFO - Cliente %d do evento %d solicitou lugar %d no evento\n",
-               targ->id_thread, targ->id_evento, meu_lugar_evento);
-        fprintf(trace, "INFO - Cliente %d do evento %d solicitou lugar %d no evento\n",
-                targ->id_thread, targ->id_evento, meu_lugar_evento);
+        printf("INFO - Cliente %d do evento %s solicitou lugar %d\n",
+               targ->id_thread, meu_evento->nome, meu_lugar_evento);
+        fprintf(trace, "INFO - Cliente %d do evento %s solicitou lugar %d\n",
+                targ->id_thread, meu_evento->nome, meu_lugar_evento);
 
         sleep(MAX_SLEEP_SOLICITAR_INGRESSO);
 
-        printf("INFO - Cliente %d do evento %d aguardando autorização de pagamento\n",
-               targ->id_thread, targ->id_evento);
-        fprintf(trace, "INFO - Cliente %d do evento %d aguardando autorização de pagamento\n",
-                targ->id_thread, targ->id_evento);
+        printf("INFO - Cliente %d do evento %s aguardando autorização de pagamento\n",
+               targ->id_thread, meu_evento->nome);
+        fprintf(trace, "INFO - Cliente %d do evento %s aguardando autorização de pagamento\n",
+                targ->id_thread, meu_evento->nome);
 
         if (autorizar_pagamento()) {
-            printf("PAGAMENTO CONFIRMADO - Pagamento da compra do cliente %d do evento %d no lugar %d foi autorizada\n",
-                   targ->id_thread, targ->id_evento, meu_lugar_evento);
+            printf("PAGAMENTO CONFIRMADO - Pagamento do cliente %d do evento %s no lugar %d foi autorizada\n",
+                   targ->id_thread, meu_evento->nome, meu_lugar_evento);
             fprintf(trace,
-                    "PAGAMENTO CONFIRMADO - Pagamento da compra do cliente %d do evento %d no lugar %d foi autorizada\n",
-                    targ->id_thread, targ->id_evento, meu_lugar_evento);
+                    "PAGAMENTO CONFIRMADO - Pagamento da compra do cliente %d do evento %s no lugar %d foi autorizada\n",
+                    targ->id_thread, meu_evento->nome, meu_lugar_evento);
 
 
-            if (confirmar_compra_evento(targ->id_evento, meu_lugar_evento)) {
-                printf("COMPRA CONFIRMADA - Compra do cliente %d no evento %d confirmada no lugar %d\n",
-                       targ->id_thread,
-                       targ->id_evento, meu_lugar_evento);
-                fprintf(trace, "COMPRA CONFIRMADA - Compra do cliente %d no evento %d confirmada no lugar %d\n",
-                        targ->id_thread,
-                        targ->id_evento, meu_lugar_evento);
+            if (confirmar_compra_evento(meu_evento, meu_lugar_evento)) {
+                printf("COMPRA CONFIRMADA - Compra do cliente %d no evento %s confirmada no lugar %d\n",
+                       targ->id_thread, meu_evento->nome, meu_lugar_evento);
+                fprintf(trace, "COMPRA CONFIRMADA - Compra do cliente %d no evento %s confirmada no lugar %d\n",
+                        targ->id_thread, meu_evento->nome, meu_lugar_evento);
             } else {
-                printf("COMPRA RECUSADA - Compra do cliente %d no evento %d não confirmada no lugar %d do evento %s\n",
-                       targ->id_thread, targ->id_evento, meu_lugar_evento,
-                       eventos[targ->id_evento].nome);
+                printf("COMPRA RECUSADA - Compra do cliente %d no evento %s não confirmada no lugar %d\n",
+                       targ->id_thread, meu_evento->nome, meu_lugar_evento);
                 fprintf(trace,
-                        "COMPRA RECUSADA - Compra do cliente %d no evento %d não confirmada no lugar %d do evento %s\n",
-                        targ->id_thread, targ->id_evento, meu_lugar_evento,
-                        eventos[targ->id_evento].nome);
+                        "COMPRA RECUSADA - Compra do cliente %d no evento %s não confirmada no lugar %d\n",
+                        targ->id_thread, meu_evento->nome, meu_lugar_evento);
 
-                liberar_lugar(targ->id_evento, meu_lugar_evento);
+                liberar_lugar(meu_evento, meu_lugar_evento);
             }
 
         } else {
-            printf("PAGAMENTO RECUSADO - Pagamento da compra do cliente %d do evento %d no lugar %d não autorizada\n",
-                   targ->id_thread, targ->id_evento, meu_lugar_evento);
+            printf("PAGAMENTO RECUSADO - Pagamento do cliente %d do evento %s no lugar %d não autorizada\n",
+                   targ->id_thread, meu_evento->nome, meu_lugar_evento);
             fprintf(trace,
-                    "PAGAMENTO RECUSADO - Pagamento da compra do cliente %d do evento %d no lugar %d não autorizada\n",
-                    targ->id_thread, targ->id_evento, meu_lugar_evento);
+                    "PAGAMENTO RECUSADO - Pagamento do cliente %d do evento %s no lugar %d não autorizada\n",
+                    targ->id_thread, meu_evento->nome, meu_lugar_evento);
 
-            sem_wait(&eventos[targ->id_evento].mutex_rel);
+            sem_wait(&meu_evento->mutex_rel);
             eventos[targ->id_evento].relatorio->falha_pagamento++;
-            sem_post(&eventos[targ->id_evento].mutex_rel);
-            liberar_lugar(targ->id_evento, meu_lugar_evento);
+            sem_post(&meu_evento->mutex_rel);
+            liberar_lugar(meu_evento, meu_lugar_evento);
         }
     } else {
         int new_id_evento = recomendacao();
 
         if (meu_lugar_evento == -1 && new_id_evento == -1) {
-            sem_wait(&eventos[targ->id_evento].mutex_rel);
+            sem_wait(&meu_evento->mutex_rel);
             eventos[targ->id_evento].relatorio->indisp_total++;
-            sem_post(&eventos[targ->id_evento].mutex_rel);
+            sem_post(&meu_evento->mutex_rel);
         }
 
         //recomendar outro espetáculo se a thread já não foi relançada
@@ -272,9 +273,9 @@ void *thread_cliente(void *args) {
             if (new_id_evento >= 0) {
                 if (get_randon(1)) {
                     printf("RECOMENDACAO SEGUIDA - Cliente %d aceitou recomendação do evento %s\n",
-                           targ->id_thread, eventos[new_id_evento].nome);
+                           targ->id_thread, get_evento(new_id_evento)->nome);
                     fprintf(trace, "RECOMENDACAO SEGUIDA - Cliente %d aceitou recomendação do evento %s\n",
-                            targ->id_thread, eventos[new_id_evento].nome);
+                            targ->id_thread, get_evento(new_id_evento)->nome);
 
                     ARG *new_arg = (ARG *) malloc(sizeof(ARG));
                     new_arg->id_thread = targ->id_thread;
@@ -283,14 +284,14 @@ void *thread_cliente(void *args) {
                     pthread_create(&tid, NULL, thread_cliente, (void *) new_arg);
                     pthread_join(tid, 0);
                 } else {
-                    sem_wait(&eventos[targ->id_evento].mutex_rel);
+                    sem_wait(&meu_evento->mutex_rel);
                     eventos[targ->id_evento].relatorio->recusa_outro_evento++;
-                    sem_post(&eventos[targ->id_evento].mutex_rel);
-                    printf("RECOMENDACAO IGNORADA - Cliente %d, evento %s, recusou a recomendação do evento %s\n",
-                           targ->id_thread, eventos[targ->id_evento].nome, eventos[new_id_evento].nome);
+                    sem_post(&meu_evento->mutex_rel);
+                    printf("RECOMENDACAO IGNORADA - Cliente %d recusou a recomendação do evento %s\n",
+                           targ->id_thread, get_evento(new_id_evento)->nome);
                     fprintf(trace,
-                            "RECOMENDACAO IGNORADA - Cliente %d, evento %s, recusou a recomendação do evento %s\n",
-                            targ->id_evento, eventos[targ->id_evento].nome, eventos[new_id_evento].nome);
+                            "RECOMENDACAO IGNORADA - Cliente %d recusou a recomendação do evento %s\n",
+                            targ->id_thread, get_evento(new_id_evento)->nome);
                 }
             }
         }
@@ -298,7 +299,7 @@ void *thread_cliente(void *args) {
     }
 
     fprintf(trace, "INFO - Thread cliente %d do evento %s processada\n",
-            targ->id_thread, eventos[targ->id_evento].nome);
+            targ->id_thread, meu_evento->nome);
 
     free(args);
     pthread_exit(0);
@@ -309,18 +310,18 @@ void *thread_cliente(void *args) {
  * @param id_evento id do evento que se quer comprar um ingresso
  * @return o lugar escolhido, senão retorna -1 para nenhum lugar disponível ou retorna -2 se algum erro acontecer
  */
-int solicitar_ingresso(int id_evento) {
+int solicitar_ingresso(EVENTO *evento) {
     int retorno = -1;
-    if (id_evento >= 0) {
-        sem_wait(&eventos[id_evento].mutex);
-        for (int i = 0; i < eventos[i].max_lotacao; i++) {
-            if (eventos[id_evento].lugares[i] == VAZIO) {
-                eventos[id_evento].lugares[i] = EM_COMPRA;
+    if (evento != NULL) {
+        sem_wait(&evento->mutex);
+        for (int i = 0; i < evento->max_lotacao; i++) {
+            if (evento->lugares[i] == VAZIO) {
+                eventos->lugares[i] = EM_COMPRA;
                 retorno = i;
                 break;
             }
         }
-        sem_post(&eventos[id_evento].mutex);
+        sem_post(&evento->mutex);
         return retorno;
     }
     return -2;
@@ -344,17 +345,17 @@ bool autorizar_pagamento() {
  * @param id_lugar id do lugar que se deseja confirmar a compra nesse evento
  * @return true se foi confirmada, senão retorna false
  */
-bool confirmar_compra_evento(int id_evento, int id_lugar) {
-    if (id_evento < 0 && id_lugar < 0) {
+bool confirmar_compra_evento(EVENTO *evento, int id_lugar) {
+    if (evento == NULL && id_lugar < 0) {
         return false;
     }
     bool retorno = false;
-    sem_wait(&eventos[id_evento].mutex);
-    if (eventos[id_evento].lugares[id_lugar] != VENDIDO) {
-        eventos[id_evento].lugares[id_lugar] = VENDIDO;
+    sem_wait(&evento->mutex);
+    if (evento->lugares[id_lugar] != VENDIDO) {
+        evento->lugares[id_lugar] = VENDIDO;
         retorno = true;
     }
-    sem_post(&eventos[id_evento].mutex);
+    sem_post(&evento->mutex);
     return retorno;
 }
 
@@ -363,13 +364,13 @@ bool confirmar_compra_evento(int id_evento, int id_lugar) {
  * @param id_evento que se quer liberar o lugar
  * @param id_lugar que se quer liberar
  */
-void liberar_lugar(int id_evento, int id_lugar) {
-    if (id_evento >= 0 && id_lugar >= 0) {
-        sem_wait(&eventos[id_evento].mutex);
-        if (eventos[id_evento].lugares[id_lugar] != VAZIO) {
-            eventos[id_evento].lugares[id_lugar] = VAZIO;
+void liberar_lugar(EVENTO *evento, int id_lugar) {
+    if (evento != NULL && id_lugar >= 0) {
+        sem_wait(&evento->mutex);
+        if (evento->lugares[id_lugar] != VAZIO) {
+            evento->lugares[id_lugar] = VAZIO;
         }
-        sem_post(&eventos[id_evento].mutex);
+        sem_post(&evento->mutex);
     }
 }
 
@@ -433,4 +434,16 @@ void relatorio(){
                 eventos[i].relatorio->recusa_outro_evento, eventos[i].relatorio->indisp_total,
                 eventos[i].relatorio->falha_pagamento);
     }
+}
+
+/**
+ *
+ * @param id_evento Id do evento que se quer.
+ * @return O ponteiro do evento indicado pelo id solicitado, senão retorna NULL
+ */
+EVENTO *get_evento(int id_evento) {
+    if (id_evento >= 0) {
+        return &eventos[id_evento];
+    }
+    return NULL;
 }
