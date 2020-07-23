@@ -38,6 +38,7 @@ struct evento {
 struct thread_arg {
     int id_evento;
     int id_thread;
+    bool relancada;
 } typedef ARG;
 
 FILE *trace;
@@ -113,19 +114,19 @@ int main() {
 
     pthread_t tids[num_eventos][max_clientes];
     for (int i = 0; i < num_eventos; i++) {
-        fprintf(trace, "INFO - Inicializando evento %d", i);
+        fprintf(trace, "INFO - Inicializando evento %d\n", i);
         printf("INFO - Inicializando evento %d\n", i);
         sem_init(&(eventos[i].mutex), 0, 1);
 
         printf("INFO - Alocando memória para vetor de lugares do evento %d (tamanho %d)\n", i, eventos[i].max_lotacao);
-        eventos[i].lugares = (STATUS *) malloc(sizeof(STATUS) * eventos[i].max_lotacao);
+        eventos[i].lugares = malloc(sizeof(STATUS *) * eventos[i].max_lotacao);
 
         for (int j = 0; j < eventos[i].max_lotacao; j++) {
             eventos[i].lugares[j] = VAZIO;
             printf("Evento[%d][%d]: %d\n", i, j, eventos[i].lugares[j]);
         }
 
-        eventos[i].relatorio = malloc(sizeof(RELATORIO *));
+        eventos[i].relatorio = malloc(sizeof(RELATORIO));
         eventos[i].relatorio->falha_pagamento = 0;
         eventos[i].relatorio->indisp_total = 0;
         eventos[i].relatorio->recusa_outro_evento = 0;
@@ -138,7 +139,8 @@ int main() {
         for (int j = 0; j < eventos[i].max_clientes_gerar; j++) {
             args = (ARG *) malloc(sizeof(ARG));
             args->id_evento = i;
-            args->id_thread = j;
+            args->id_thread = NULL;
+            args->relancada = false;
             if (pthread_create(&tids[i][j], NULL, thread_cliente, (void *) args)) {
                 printf("ERRO - ao criar thread %d para evento %d", j, i);
                 fprintf(trace, "ERRO - ao criar thread %d para evento %d", j, i);
@@ -186,7 +188,9 @@ int get_randon(int max_value) {
 void *thread_cliente(void *args) {
     ARG *targ = (ARG *) args;
     int meu_lugar_evento;
-    targ->id_thread = (unsigned int) pthread_self(); //recuperação do ID único da thread
+    if (targ->id_thread == NULL) {
+        targ->id_thread = (unsigned int) pthread_self(); //recuperação do ID único da thread
+    }
 
     printf("INFO - Cliente %d solicitando ingresso no evento %s\n",
            targ->id_thread, eventos[targ->id_evento].nome);
@@ -243,33 +247,40 @@ void *thread_cliente(void *args) {
             liberar_lugar(targ->id_evento, meu_lugar_evento);
         }
     } else {
-        //recomendar outro espetáculo
         int new_id_evento = recomendacao();
-        pthread_t tid;
 
-        if (meu_lugar_evento == -1) {
+        if (meu_lugar_evento == -1 && new_id_evento == -1) {
             eventos[targ->id_evento].relatorio->indisp_total++;
         }
-        if (new_id_evento >= 0) {
-            if (get_randon(1)) {
-                printf("RECOMENDACAO SEGUIDA - Cliente %d aceitou recomendação do evento %s\n",
-                       targ->id_thread, eventos[new_id_evento].nome);
-                fprintf(trace, "RECOMENDACAO SEGUIDA - Cliente %d aceitou recomendação do evento %s\n",
-                        targ->id_thread, eventos[new_id_evento].nome);
 
-                ARG *new_arg = (ARG *) malloc(sizeof(ARG));
-                new_arg->id_thread = targ->id_thread;
-                new_arg->id_evento = new_id_evento;
-                pthread_create(&tid, NULL, thread_cliente, (void *) new_arg);
-                pthread_join(tid, 0);
-            } else {
-                eventos[targ->id_evento].relatorio->recusa_outro_evento++;
-                printf("RECOMENDACAO IGNORADA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
-                       targ->id_thread, targ->id_evento, eventos[new_id_evento].nome);
-                fprintf(trace, "RECOMENDACAO IGNORADA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
-                        targ->id_evento, targ->id_evento, eventos[new_id_evento].nome);
+        //recomendar outro espetáculo se a thread já não foi relançada
+        if (!targ->relancada) {
+            pthread_t tid;
+
+            if (new_id_evento >= 0) {
+                if (get_randon(1)) {
+                    printf("RECOMENDACAO SEGUIDA - Cliente %d aceitou recomendação do evento %s\n",
+                           targ->id_thread, eventos[new_id_evento].nome);
+                    fprintf(trace, "RECOMENDACAO SEGUIDA - Cliente %d aceitou recomendação do evento %s\n",
+                            targ->id_thread, eventos[new_id_evento].nome);
+
+                    ARG *new_arg = (ARG *) malloc(sizeof(ARG));
+                    new_arg->id_thread = targ->id_thread;
+                    new_arg->id_evento = new_id_evento;
+                    new_arg->relancada = true;
+                    pthread_create(&tid, NULL, thread_cliente, (void *) new_arg);
+                    pthread_join(tid, 0);
+                } else {
+                    eventos[targ->id_evento].relatorio->recusa_outro_evento++;
+                    printf("RECOMENDACAO IGNORADA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
+                           targ->id_thread, targ->id_evento, eventos[new_id_evento].nome);
+                    fprintf(trace,
+                            "RECOMENDACAO IGNORADA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
+                            targ->id_evento, targ->id_evento, eventos[new_id_evento].nome);
+                }
             }
         }
+
     }
 
     fprintf(trace, "INFO - Thread cliente %d do evento %d processada\n", targ->id_thread, targ->id_evento);
@@ -352,7 +363,7 @@ void liberar_lugar(int id_evento, int id_lugar) {
  * @return id do evento recomendado, senão retorna -1.
  */
 int recomendacao(){
-    int id_evento = -1, max_lotacao;
+    int id_evento = -1;
     for (int i = 0; i < num_eventos; i++) {
         for (int j = 0; j < eventos[i].max_lotacao; j++) {
             if (eventos[i].lugares[j] == VAZIO){
