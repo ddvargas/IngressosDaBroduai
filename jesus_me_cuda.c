@@ -20,9 +20,10 @@ enum estado_lugar {
 } typedef STATUS;
 
 struct relat {
-    int falha_pagamento;
+    int pagamento_nao_autorizado;
     int recusa_outro_evento;
     int indisp_total;
+    int compra_nao_confirmada;
 } typedef RELATORIO;
 
 struct evento {
@@ -130,9 +131,10 @@ int main() {
         }
 
         eventos[i].relatorio = malloc(sizeof(RELATORIO));
-        eventos[i].relatorio->falha_pagamento = 0;
+        eventos[i].relatorio->pagamento_nao_autorizado = 0;
         eventos[i].relatorio->indisp_total = 0;
         eventos[i].relatorio->recusa_outro_evento = 0;
+        eventos[i].relatorio->compra_nao_confirmada = 0;
     }
     fprintf(trace, "INFO - Num eventos: %d\n", num_eventos);
     printf("INFO - Num eventos: %d\n", num_eventos);
@@ -242,6 +244,9 @@ void *thread_cliente(void *args) {
                         "COMPRA RECUSADA - Compra do cliente %d no evento %s não confirmada no lugar %d\n",
                         targ->id_thread, meu_evento->nome, meu_lugar_evento);
 
+                sem_wait(&meu_evento->mutex_rel);
+                meu_evento->relatorio->compra_nao_confirmada++;
+                sem_post(&meu_evento->mutex_rel);
                 liberar_lugar(meu_evento, meu_lugar_evento);
             }
 
@@ -253,7 +258,7 @@ void *thread_cliente(void *args) {
                     targ->id_thread, meu_evento->nome, meu_lugar_evento);
 
             sem_wait(&meu_evento->mutex_rel);
-            eventos[targ->id_evento].relatorio->falha_pagamento++;
+            eventos[targ->id_evento].relatorio->pagamento_nao_autorizado++;
             sem_post(&meu_evento->mutex_rel);
             liberar_lugar(meu_evento, meu_lugar_evento);
         }
@@ -379,6 +384,7 @@ void liberar_lugar(EVENTO *evento, int id_lugar) {
  * @return id do evento recomendado, senão retorna -1.
  */
 int recomendacao(){
+    //TODO: deixar a recomendação menos procedural, não indo do evento 0 ao max
     int id_evento = -1;
     for (int i = 0; i < num_eventos; i++) {
         for (int j = 0; j < eventos[i].max_lotacao; j++) {
@@ -426,13 +432,13 @@ void relatorio(){
         fprintf(trace, "\n(%d/%d) vendidos - R$%.2f\n",
                 vendidos, eventos[i].max_lotacao, (vendidos * eventos[i].valor_ingresso));
         printf("%d clientes recusaram a recomendação\n%d não tiveram lugares por indisponibilidade total\n"
-               "%d tiveram pagamento recusado pela operadora\n\n",
+               "%d tiveram pagamento recusado pela operadora\n%d tiveram a compra não confirmada\n\n",
                eventos[i].relatorio->recusa_outro_evento, eventos[i].relatorio->indisp_total,
-               eventos[i].relatorio->falha_pagamento);
+               eventos[i].relatorio->pagamento_nao_autorizado, eventos[i].relatorio->compra_nao_confirmada);
         fprintf(trace, "%d clientes recusaram a recomendação\n%d não tiveram lugares por indisponibilidade total\n"
-                       "%d tiveram pagamento recusado pela operadora\n\n",
+                       "%d tiveram pagamento recusado pela operadora\n%d tiveram a compra não confirmada\n\n",
                 eventos[i].relatorio->recusa_outro_evento, eventos[i].relatorio->indisp_total,
-                eventos[i].relatorio->falha_pagamento);
+                eventos[i].relatorio->pagamento_nao_autorizado, eventos[i].relatorio->compra_nao_confirmada);
     }
 }
 
