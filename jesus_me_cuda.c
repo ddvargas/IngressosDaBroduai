@@ -31,7 +31,7 @@ struct evento {
     float valor_ingresso;
     int max_clientes_gerar;
     STATUS *lugares;
-    sem_t mutex;
+    sem_t mutex, mutex_rel;
     RELATORIO *relatorio;
 } typedef EVENTO;
 
@@ -117,6 +117,7 @@ int main() {
         fprintf(trace, "INFO - Inicializando evento %d\n", i);
         printf("INFO - Inicializando evento %d\n", i);
         sem_init(&(eventos[i].mutex), 0, 1);
+        sem_init(&(eventos[i].mutex_rel), 0, 1);
 
         printf("INFO - Alocando memória para vetor de lugares do evento %d (tamanho %d)\n", i, eventos[i].max_lotacao);
         eventos[i].lugares = malloc(sizeof(STATUS *) * eventos[i].max_lotacao);
@@ -250,14 +251,18 @@ void *thread_cliente(void *args) {
                     "PAGAMENTO RECUSADO - Pagamento da compra do cliente %d do evento %d no lugar %d não autorizada\n",
                     targ->id_thread, targ->id_evento, meu_lugar_evento);
 
+            sem_wait(&eventos[targ->id_evento].mutex_rel);
             eventos[targ->id_evento].relatorio->falha_pagamento++;
+            sem_post(&eventos[targ->id_evento].mutex_rel);
             liberar_lugar(targ->id_evento, meu_lugar_evento);
         }
     } else {
         int new_id_evento = recomendacao();
 
         if (meu_lugar_evento == -1 && new_id_evento == -1) {
+            sem_wait(&eventos[targ->id_evento].mutex_rel);
             eventos[targ->id_evento].relatorio->indisp_total++;
+            sem_post(&eventos[targ->id_evento].mutex_rel);
         }
 
         //recomendar outro espetáculo se a thread já não foi relançada
@@ -278,7 +283,9 @@ void *thread_cliente(void *args) {
                     pthread_create(&tid, NULL, thread_cliente, (void *) new_arg);
                     pthread_join(tid, 0);
                 } else {
+                    sem_wait(&eventos[targ->id_evento].mutex_rel);
                     eventos[targ->id_evento].relatorio->recusa_outro_evento++;
+                    sem_post(&eventos[targ->id_evento].mutex_rel);
                     printf("RECOMENDACAO IGNORADA - Cliente %d, evento %s, recusou a recomendação do evento %s\n",
                            targ->id_thread, eventos[targ->id_evento].nome, eventos[new_id_evento].nome);
                     fprintf(trace,
