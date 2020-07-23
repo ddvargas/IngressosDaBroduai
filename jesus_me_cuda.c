@@ -19,6 +19,12 @@ enum estado_lugar {
     VENDIDO, VAZIO, EM_COMPRA
 } typedef STATUS;
 
+struct relat {
+    int falha_pagamento;
+    int recusa_outro_evento;
+    int indisp_total;
+} typedef RELATORIO;
+
 struct evento {
     char nome[100];
     short unsigned int max_lotacao;
@@ -26,6 +32,7 @@ struct evento {
     int max_clientes_gerar;
     STATUS *lugares;
     sem_t mutex;
+    RELATORIO *relatorio;
 } typedef EVENTO;
 
 struct thread_arg {
@@ -117,6 +124,11 @@ int main() {
             eventos[i].lugares[j] = VAZIO;
             printf("Evento[%d][%d]: %d\n", i, j, eventos[i].lugares[j]);
         }
+
+        eventos[i].relatorio = malloc(sizeof(RELATORIO *));
+        eventos[i].relatorio->falha_pagamento = 0;
+        eventos[i].relatorio->indisp_total = 0;
+        eventos[i].relatorio->recusa_outro_evento = 0;
     }
     fprintf(trace, "INFO - Num eventos: %d\n", num_eventos);
     printf("INFO - Num eventos: %d\n", num_eventos);
@@ -148,6 +160,7 @@ int main() {
     fclose(trace);
     for (int k = 0; k < num_eventos; ++k) {
         free(eventos[k].lugares);
+        free(eventos[k].relatorio);
     }
     free(eventos);
     exit(0);
@@ -173,7 +186,7 @@ int get_randon(int max_value) {
 void *thread_cliente(void *args) {
     ARG *targ = (ARG *) args;
     int meu_lugar_evento;
-    targ->id_thread = pthread_self(); //recuperação do ID único da thread
+    targ->id_thread = (unsigned int) pthread_self(); //recuperação do ID único da thread
 
     printf("INFO - Cliente %d solicitando ingresso no evento %s\n",
            targ->id_thread, eventos[targ->id_evento].nome);
@@ -226,6 +239,7 @@ void *thread_cliente(void *args) {
             printf("PAGAMENTO RECUSADO - Pagamento da compra do cliente %d do evento %d no lugar %d não autorizada\n",
                    targ->id_thread, targ->id_evento, meu_lugar_evento);
 
+            eventos[targ->id_evento].relatorio->falha_pagamento++;
             liberar_lugar(targ->id_evento, meu_lugar_evento);
         }
     } else {
@@ -233,7 +247,10 @@ void *thread_cliente(void *args) {
         int new_id_evento = recomendacao();
         pthread_t tid;
 
-        if (new_id_evento >= 0){
+        if (meu_lugar_evento == -1) {
+            eventos[targ->id_evento].relatorio->indisp_total++;
+        }
+        if (new_id_evento >= 0) {
             if (get_randon(1)) {
                 printf("RECOMENDACAO SEGUIDA - Cliente %d aceitou recomendação do evento %s\n",
                        targ->id_thread, eventos[new_id_evento].nome);
@@ -246,6 +263,7 @@ void *thread_cliente(void *args) {
                 pthread_create(&tid, NULL, thread_cliente, (void *) new_arg);
                 pthread_join(tid, 0);
             } else {
+                eventos[targ->id_evento].relatorio->recusa_outro_evento++;
                 printf("RECOMENDACAO IGNORADA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
                        targ->id_thread, targ->id_evento, eventos[new_id_evento].nome);
                 fprintf(trace, "RECOMENDACAO IGNORADA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
@@ -376,9 +394,17 @@ void relatorio(){
                     break;
             }
         }
-        printf("\n(%d/%d) vendidos - R$%.2f\n\n",
+        printf("\n(%d/%d) vendidos - R$%.2f\n",
                vendidos, eventos[i].max_lotacao, (vendidos * eventos[i].valor_ingresso));
-        fprintf(trace, "\n(%d/%d) vendidos - R$%.2f\n\n",
+        fprintf(trace, "\n(%d/%d) vendidos - R$%.2f\n",
                 vendidos, eventos[i].max_lotacao, (vendidos * eventos[i].valor_ingresso));
+        printf("%d clientes recusaram a recomendação\n%d não tiveram lugares por indisponibilidade total\n"
+               "%d tiveram pagamento recusado pela operadora\n\n",
+               eventos[i].relatorio->recusa_outro_evento, eventos[i].relatorio->indisp_total,
+               eventos[i].relatorio->falha_pagamento);
+        fprintf(trace, "%d clientes recusaram a recomendação\n%d não tiveram lugares por indisponibilidade total\n"
+                       "%d tiveram pagamento recusado pela operadora\n\n",
+                eventos[i].relatorio->recusa_outro_evento, eventos[i].relatorio->indisp_total,
+                eventos[i].relatorio->falha_pagamento);
     }
 }
