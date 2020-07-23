@@ -144,6 +144,9 @@ int main() {
             if (pthread_create(&tids[i][j], NULL, thread_cliente, (void *) args)) {
                 printf("ERRO - ao criar thread %d para evento %d", j, i);
                 fprintf(trace, "ERRO - ao criar thread %d para evento %d", j, i);
+            } else {
+                printf("LANCAMENTO - %d\n", tids[i][j]);
+                fprintf(trace, "LANCAMENTO - %d\n", tids[i][j]);
             }
         }
     }
@@ -229,12 +232,13 @@ void *thread_cliente(void *args) {
                         targ->id_thread,
                         targ->id_evento, meu_lugar_evento);
             } else {
-                printf("COMPRA RECUSADA - Compra do cliente %d no evento %d não confirmada no lugar %d\n",
-                       targ->id_thread,
-                       targ->id_evento, meu_lugar_evento);
-                fprintf(trace, "COMPRA RECUSADA - Compra do cliente %d no evento %d não confirmada no lugar %d\n",
-                        targ->id_thread,
-                        targ->id_evento, meu_lugar_evento);
+                printf("COMPRA RECUSADA - Compra do cliente %d no evento %d não confirmada no lugar %d do evento %s\n",
+                       targ->id_thread, targ->id_evento, meu_lugar_evento,
+                       eventos[targ->id_evento].nome);
+                fprintf(trace,
+                        "COMPRA RECUSADA - Compra do cliente %d no evento %d não confirmada no lugar %d do evento %s\n",
+                        targ->id_thread, targ->id_evento, meu_lugar_evento,
+                        eventos[targ->id_evento].nome);
 
                 liberar_lugar(targ->id_evento, meu_lugar_evento);
             }
@@ -242,6 +246,9 @@ void *thread_cliente(void *args) {
         } else {
             printf("PAGAMENTO RECUSADO - Pagamento da compra do cliente %d do evento %d no lugar %d não autorizada\n",
                    targ->id_thread, targ->id_evento, meu_lugar_evento);
+            fprintf(trace,
+                    "PAGAMENTO RECUSADO - Pagamento da compra do cliente %d do evento %d no lugar %d não autorizada\n",
+                    targ->id_thread, targ->id_evento, meu_lugar_evento);
 
             eventos[targ->id_evento].relatorio->falha_pagamento++;
             liberar_lugar(targ->id_evento, meu_lugar_evento);
@@ -272,18 +279,19 @@ void *thread_cliente(void *args) {
                     pthread_join(tid, 0);
                 } else {
                     eventos[targ->id_evento].relatorio->recusa_outro_evento++;
-                    printf("RECOMENDACAO IGNORADA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
-                           targ->id_thread, targ->id_evento, eventos[new_id_evento].nome);
+                    printf("RECOMENDACAO IGNORADA - Cliente %d, evento %s, recusou a recomendação do evento %s\n",
+                           targ->id_thread, eventos[targ->id_evento].nome, eventos[new_id_evento].nome);
                     fprintf(trace,
-                            "RECOMENDACAO IGNORADA - Cliente %d, evento %d, recusou a recomendação do evento %s\n",
-                            targ->id_evento, targ->id_evento, eventos[new_id_evento].nome);
+                            "RECOMENDACAO IGNORADA - Cliente %d, evento %s, recusou a recomendação do evento %s\n",
+                            targ->id_evento, eventos[targ->id_evento].nome, eventos[new_id_evento].nome);
                 }
             }
         }
 
     }
 
-    fprintf(trace, "INFO - Thread cliente %d do evento %d processada\n", targ->id_thread, targ->id_evento);
+    fprintf(trace, "INFO - Thread cliente %d do evento %s processada\n",
+            targ->id_thread, eventos[targ->id_evento].nome);
 
     free(args);
     pthread_exit(0);
