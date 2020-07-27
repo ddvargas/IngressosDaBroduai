@@ -69,10 +69,10 @@ void relatorio();
 
 int main() {
     FILE *input;
-    int max_clientes = 0;
     char buffer_read_input[TAM_BUFFER_FILE];
     char *linha;
     ARG *args = NULL;
+    pthread_t **tids;
 
     input = fopen("input.txt", "r");
     trace = fopen("trace.txt", "a");
@@ -130,9 +130,6 @@ int main() {
             if (linha != NULL) {
                 int max_cli = atoi(linha);
                 eventos[num_eventos - 1].max_clientes_gerar = max_cli;
-                if (max_clientes < max_cli) {
-                    max_clientes = max_cli;
-                }
             } else {
                 printf("ERRO - Arquivo de input inconsistente\n");
                 fprintf(trace, "ERRO - Arquivo de input inconsistente\n");
@@ -143,7 +140,6 @@ int main() {
     fprintf(trace, "INFO - Leitura arquivo input terminada\n");
     printf("INFO - Leitura arquivo input terminada\n");
 
-    pthread_t tids[num_eventos][max_clientes];
     for (int i = 0; i < num_eventos; i++) {
         fprintf(trace, "INFO - Inicializando evento %d\n", i);
         printf("INFO - Inicializando evento %d\n", i);
@@ -169,7 +165,12 @@ int main() {
     printf("INFO - Num eventos: %d\n", num_eventos);
     fprintf(trace, "INFO - Lançando threads\n");
     printf("INFO - Lançando threads\n");
+
+    //Alocação dínamica de memória para os tids das threads
+    tids = (pthread_t **) malloc(sizeof(pthread_t *) * num_eventos);
     for (int i = 0; i < num_eventos; i++) {
+        tids[i] = (pthread_t *) malloc(sizeof(pthread_t) * eventos[i].max_clientes_gerar);
+
         for (int j = 0; j < eventos[i].max_clientes_gerar; j++) {
             args = (ARG *) malloc(sizeof(ARG));
             args->id_evento = i;
@@ -198,10 +199,12 @@ int main() {
     fclose(input);
     fclose(trace);
     for (int k = 0; k < num_eventos; ++k) {
+        free(tids[k]);
         free(eventos[k].nome);
         free(eventos[k].lugares);
         free(eventos[k].relatorio);
     }
+    free(tids);
     free(eventos);
     exit(0);
 }
