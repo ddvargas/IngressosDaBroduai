@@ -99,7 +99,7 @@ int main() {
             linha = strtok(buffer_read_input, "|");
             if (linha != NULL) {
                 eventos = (EVENTO *) realloc(eventos, sizeof(EVENTO) * ++num_eventos);
-                eventos[num_eventos - 1].nome = (char *) malloc(sizeof(char) * strlen(linha));
+                eventos[num_eventos - 1].nome = (char *) malloc(sizeof(char) * (strlen(linha) + 1));
                 strcpy(eventos[num_eventos - 1].nome, linha);
                 linha = strtok(NULL, "|");
             } else {
