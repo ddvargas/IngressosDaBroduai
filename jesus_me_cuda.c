@@ -97,20 +97,46 @@ int main() {
     while (fgets(buffer_read_input, TAM_BUFFER_FILE, input)) {
         if (buffer_read_input[0] != '\n') {
             linha = strtok(buffer_read_input, "|");
-            eventos = (EVENTO *) realloc(eventos, sizeof(EVENTO) * ++num_eventos);
-            eventos[num_eventos - 1].nome = (char *) malloc(sizeof(char) * strlen(linha));
-            //para cada linha, extrair os parâmetros
-            strcpy(eventos[num_eventos - 1].nome, linha);
-            linha = strtok(NULL, "|");
-            eventos[num_eventos - 1].max_lotacao = atoi(linha);
+            if (linha != NULL) {
+                eventos = (EVENTO *) realloc(eventos, sizeof(EVENTO) * ++num_eventos);
+                eventos[num_eventos - 1].nome = (char *) malloc(sizeof(char) * strlen(linha));
+                strcpy(eventos[num_eventos - 1].nome, linha);
+                linha = strtok(NULL, "|");
+            } else {
+                printf("ERRO - Arquivo de input inconsistente\n");
+                fprintf(trace, "ERRO - Arquivo de input inconsistente\n");
+                exit(-1);
+            }
 
-            linha = strtok(NULL, "|");
-            eventos[num_eventos - 1].valor_ingresso = atof(linha);
-            linha = strtok(NULL, "|");
-            int max_cli = atoi(linha);
-            eventos[num_eventos - 1].max_clientes_gerar = max_cli;
-            if (max_clientes < max_cli) {
-                max_clientes = max_cli;
+            if (linha != NULL) {
+                //para cada linha, extrair os parâmetros
+                eventos[num_eventos - 1].max_lotacao = atoi(linha);
+                linha = strtok(NULL, "|");
+            } else {
+                printf("ERRO - Arquivo de input inconsistente\n");
+                fprintf(trace, "ERRO - Arquivo de input inconsistente\n");
+                exit(-1);
+            }
+
+            if (linha != NULL) {
+                eventos[num_eventos - 1].valor_ingresso = atof(linha);
+                linha = strtok(NULL, "|");
+            } else {
+                printf("ERRO - Arquivo de input inconsistente\n");
+                fprintf(trace, "ERRO - Arquivo de input inconsistente\n");
+                exit(-1);
+            }
+
+            if (linha != NULL) {
+                int max_cli = atoi(linha);
+                eventos[num_eventos - 1].max_clientes_gerar = max_cli;
+                if (max_clientes < max_cli) {
+                    max_clientes = max_cli;
+                }
+            } else {
+                printf("ERRO - Arquivo de input inconsistente\n");
+                fprintf(trace, "ERRO - Arquivo de input inconsistente\n");
+                exit(-1);
             }
         }
     }
