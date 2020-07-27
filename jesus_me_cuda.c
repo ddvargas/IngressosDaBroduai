@@ -421,7 +421,6 @@ void liberar_lugar(EVENTO *evento, int id_lugar) {
  * @return id do evento recomendado, senão retorna -1.
  */
 int recomendacao(){
-    //TODO: deixar a recomendação menos procedural, não indo do evento 0 ao max
     int id_evento = -1;
     for (int i = 0; i < num_eventos; i++) {
         for (int j = 0; j < eventos[i].max_lotacao; j++) {
@@ -489,7 +488,7 @@ void relatorio(){
  * @return O ponteiro do evento indicado pelo id solicitado, senão retorna NULL
  */
 EVENTO *get_evento(int id_evento) {
-    if (id_evento >= 0) {
+    if (id_evento >= 0 && id_evento < num_eventos) {
         return &eventos[id_evento];
     }
     return NULL;
