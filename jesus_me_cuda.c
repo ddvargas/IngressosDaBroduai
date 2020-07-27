@@ -28,7 +28,7 @@ struct relat {
 } typedef RELATORIO;
 
 struct evento {
-    char nome[100];
+    char *nome;
     short unsigned int max_lotacao;
     float valor_ingresso;
     int max_clientes_gerar;
@@ -98,6 +98,7 @@ int main() {
         if (buffer_read_input[0] != '\n') {
             linha = strtok(buffer_read_input, "|");
             eventos = (EVENTO *) realloc(eventos, sizeof(EVENTO) * ++num_eventos);
+            eventos[num_eventos - 1].nome = (char *) malloc(sizeof(char) * strlen(linha));
             //para cada linha, extrair os parâmetros
             strcpy(eventos[num_eventos - 1].nome, linha);
             linha = strtok(NULL, "|");
@@ -171,6 +172,7 @@ int main() {
     fclose(input);
     fclose(trace);
     for (int k = 0; k < num_eventos; ++k) {
+        free(eventos[k].nome);
         free(eventos[k].lugares);
         free(eventos[k].relatorio);
     }
