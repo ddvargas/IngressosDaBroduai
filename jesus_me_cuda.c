@@ -16,12 +16,13 @@
 #define MAX_SLEEP_AUTORIZACAO_PAGAMENTO 2
 
 enum estado_lugar {
-    VENDIDO, VAZIO, EM_COMPRA
+    VENDIDO = 1, VAZIO, EM_COMPRA
 } typedef STATUS;
 
 struct relat {
     int pagamento_nao_autorizado;
-    int recusa_outro_evento;
+    int recusa_recomendacao;
+    int aceita_recomendacao;
     int indisp_total;
     int compra_nao_confirmada;
 } typedef RELATORIO;
@@ -123,7 +124,7 @@ int main() {
         sem_init(&(eventos[i].mutex_rel), 0, 1);
 
         printf("INFO - Alocando memória para vetor de lugares do evento %d (tamanho %d)\n", i, eventos[i].max_lotacao);
-        eventos[i].lugares = malloc(sizeof(STATUS *) * eventos[i].max_lotacao);
+        eventos[i].lugares = (STATUS *) malloc(sizeof(STATUS) * eventos[i].max_lotacao);
 
         for (int j = 0; j < eventos[i].max_lotacao; j++) {
             eventos[i].lugares[j] = VAZIO;
@@ -133,8 +134,9 @@ int main() {
         eventos[i].relatorio = malloc(sizeof(RELATORIO));
         eventos[i].relatorio->pagamento_nao_autorizado = 0;
         eventos[i].relatorio->indisp_total = 0;
-        eventos[i].relatorio->recusa_outro_evento = 0;
+        eventos[i].relatorio->recusa_recomendacao = 0;
         eventos[i].relatorio->compra_nao_confirmada = 0;
+        eventos[i].relatorio->aceita_recomendacao = 0;
     }
     fprintf(trace, "INFO - Num eventos: %d\n", num_eventos);
     printf("INFO - Num eventos: %d\n", num_eventos);
@@ -267,7 +269,7 @@ void *thread_cliente(void *args) {
 
         if (meu_lugar_evento == -1 && new_id_evento == -1) {
             sem_wait(&meu_evento->mutex_rel);
-            eventos[targ->id_evento].relatorio->indisp_total++;
+            meu_evento->relatorio->indisp_total++;
             sem_post(&meu_evento->mutex_rel);
         }
 
@@ -282,6 +284,10 @@ void *thread_cliente(void *args) {
                     fprintf(trace, "RECOMENDACAO SEGUIDA - Cliente %d aceitou recomendação do evento %s\n",
                             targ->id_thread, get_evento(new_id_evento)->nome);
 
+
+                    sem_wait(&meu_evento->mutex_rel);
+                    meu_evento->relatorio->aceita_recomendacao++;
+                    sem_post(&meu_evento->mutex_rel);
                     ARG *new_arg = (ARG *) malloc(sizeof(ARG));
                     new_arg->id_thread = targ->id_thread;
                     new_arg->id_evento = new_id_evento;
@@ -290,7 +296,7 @@ void *thread_cliente(void *args) {
                     pthread_join(tid, 0);
                 } else {
                     sem_wait(&meu_evento->mutex_rel);
-                    eventos[targ->id_evento].relatorio->recusa_outro_evento++;
+                    eventos[targ->id_evento].relatorio->recusa_recomendacao++;
                     sem_post(&meu_evento->mutex_rel);
                     printf("RECOMENDACAO IGNORADA - Cliente %d recusou a recomendação do evento %s\n",
                            targ->id_thread, get_evento(new_id_evento)->nome);
@@ -321,7 +327,7 @@ int solicitar_ingresso(EVENTO *evento) {
         sem_wait(&evento->mutex);
         for (int i = 0; i < evento->max_lotacao; i++) {
             if (evento->lugares[i] == VAZIO) {
-                eventos->lugares[i] = EM_COMPRA;
+                evento->lugares[i] = EM_COMPRA;
                 retorno = i;
                 break;
             }
@@ -356,7 +362,7 @@ bool confirmar_compra_evento(EVENTO *evento, int id_lugar) {
     }
     bool retorno = false;
     sem_wait(&evento->mutex);
-    if (evento->lugares[id_lugar] != VENDIDO) {
+    if (evento->lugares[id_lugar] == EM_COMPRA) {
         evento->lugares[id_lugar] = VENDIDO;
         retorno = true;
     }
@@ -372,7 +378,7 @@ bool confirmar_compra_evento(EVENTO *evento, int id_lugar) {
 void liberar_lugar(EVENTO *evento, int id_lugar) {
     if (evento != NULL && id_lugar >= 0) {
         sem_wait(&evento->mutex);
-        if (evento->lugares[id_lugar] != VAZIO) {
+        if (evento->lugares[id_lugar] == EM_COMPRA) {
             evento->lugares[id_lugar] = VAZIO;
         }
         sem_post(&evento->mutex);
@@ -431,19 +437,23 @@ void relatorio(){
                vendidos, eventos[i].max_lotacao, (vendidos * eventos[i].valor_ingresso));
         fprintf(trace, "\n(%d/%d) vendidos - R$%.2f\n",
                 vendidos, eventos[i].max_lotacao, (vendidos * eventos[i].valor_ingresso));
-        printf("%d clientes recusaram a recomendação\n%d não tiveram lugares por indisponibilidade total\n"
+        printf("%d clientes recusaram a recomendação\n%d clientes aceitaram a recomendação\n"
+               "%d não tiveram lugares por indisponibilidade total\n"
                "%d tiveram pagamento recusado pela operadora\n%d tiveram a compra não confirmada\n\n",
-               eventos[i].relatorio->recusa_outro_evento, eventos[i].relatorio->indisp_total,
+               eventos[i].relatorio->recusa_recomendacao, eventos[i].relatorio->aceita_recomendacao,
+               eventos[i].relatorio->indisp_total,
                eventos[i].relatorio->pagamento_nao_autorizado, eventos[i].relatorio->compra_nao_confirmada);
-        fprintf(trace, "%d clientes recusaram a recomendação\n%d não tiveram lugares por indisponibilidade total\n"
+        fprintf(trace, "%d clientes recusaram a recomendação\n%d clientes aceitaram a recomendação\n"
+                       "%d não tiveram lugares por indisponibilidade total\n"
                        "%d tiveram pagamento recusado pela operadora\n%d tiveram a compra não confirmada\n\n",
-                eventos[i].relatorio->recusa_outro_evento, eventos[i].relatorio->indisp_total,
+                eventos[i].relatorio->recusa_recomendacao, eventos[i].relatorio->aceita_recomendacao,
+                eventos[i].relatorio->indisp_total,
                 eventos[i].relatorio->pagamento_nao_autorizado, eventos[i].relatorio->compra_nao_confirmada);
     }
 }
 
 /**
- *
+ * Retorna um evento do banco de eventos.
  * @param id_evento Id do evento que se quer.
  * @return O ponteiro do evento indicado pelo id solicitado, senão retorna NULL
  */
