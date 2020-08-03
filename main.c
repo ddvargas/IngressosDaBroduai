@@ -319,6 +319,7 @@ void *thread_cliente(void *args) {
                     sem_wait(&meu_evento->mutex_rel);
                     meu_evento->relatorio->aceita_recomendacao++;
                     sem_post(&meu_evento->mutex_rel);
+
                     ARG *new_arg = (ARG *) malloc(sizeof(ARG));
                     new_arg->id_thread = targ->id_thread;
                     new_arg->id_evento = new_id_evento;
