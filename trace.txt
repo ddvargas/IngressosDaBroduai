@@ -1,0 +1,169 @@
+INFO - Lendo arquivo de input
+INFO - Leitura arquivo input terminada
+INFO - Inicializando evento 0
+INFO - Inicializando evento 1
+INFO - Inicializando evento 2
+INFO - Num eventos: 3
+INFO - Lançando threads
+LANCAMENTO - -32278784
+INFO - Cliente -32278784 solicitando ingresso no evento RockInRio
+INFO - Cliente -32278784 do evento RockInRio solicitou lugar 0
+LANCAMENTO - -40671488
+LANCAMENTO - -49064192
+LANCAMENTO - -57456896
+INFO - Cliente -57456896 solicitando ingresso no evento RockInRio
+INFO - Cliente -40671488 solicitando ingresso no evento RockInRio
+LANCAMENTO - -65849600
+INFO - Cliente -40671488 do evento RockInRio solicitou lugar 2
+INFO - Cliente -49064192 solicitando ingresso no evento RockInRio
+LANCAMENTO - -74242304
+INFO - Cliente -57456896 do evento RockInRio solicitou lugar 1
+INFO - Cliente -49064192 do evento RockInRio solicitou lugar 3
+INFO - Cliente -74242304 solicitando ingresso no evento RockInRio
+INFO - Cliente -74242304 do evento RockInRio solicitou lugar 4
+LANCAMENTO - -82635008
+INFO - Cliente -82635008 solicitando ingresso no evento RockInRio
+INFO - Cliente -65849600 solicitando ingresso no evento RockInRio
+RECOMENDACAO IGNORADA - Cliente -65849600 recusou a recomendação do evento Tomorrowland
+INFO - Thread cliente -65849600 do evento RockInRio processada
+LANCAMENTO - -91027712
+RECOMENDACAO IGNORADA - Cliente -82635008 recusou a recomendação do evento Tomorrowland
+INFO - Thread cliente -82635008 do evento RockInRio processada
+LANCAMENTO - -201328896
+INFO - Cliente -201328896 solicitando ingresso no evento RockInRio
+RECOMENDACAO SEGUIDA - Cliente -201328896 aceitou recomendação do evento Tomorrowland
+LANCAMENTO - -99420416
+LANCAMENTO - -107923712
+INFO - Cliente -99420416 solicitando ingresso no evento RockInRio
+RECOMENDACAO SEGUIDA - Cliente -99420416 aceitou recomendação do evento Tomorrowland
+LANCAMENTO - -124709120
+INFO - Cliente -124709120 solicitando ingresso no evento SuperBowl
+INFO - Cliente -124709120 do evento SuperBowl solicitou lugar 0
+LANCAMENTO - -209721600
+INFO - Cliente -209721600 solicitando ingresso no evento SuperBowl
+INFO - Cliente -209721600 do evento SuperBowl solicitou lugar 1
+LANCAMENTO - -226507008
+LANCAMENTO - -234899712
+LANCAMENTO - -243292416
+LANCAMENTO - -251685120
+LANCAMENTO - -469764352
+INFO - Cliente -91027712 solicitando ingresso no evento RockInRio
+RECOMENDACAO SEGUIDA - Cliente -91027712 aceitou recomendação do evento Tomorrowland
+LANCAMENTO - -478157056
+INFO - Cliente -107923712 solicitando ingresso no evento SuperBowl
+INFO - Cliente -107923712 do evento SuperBowl solicitou lugar 2
+LANCAMENTO - -494942464
+INFO - Cliente -469764352 solicitando ingresso no evento SuperBowl
+INFO - Cliente -469764352 do evento SuperBowl solicitou lugar 3
+INFO - Cliente -226507008 solicitando ingresso no evento SuperBowl
+INFO - Cliente -226507008 do evento SuperBowl solicitou lugar 4
+INFO - Cliente -251685120 solicitando ingresso no evento SuperBowl
+RECOMENDACAO SEGUIDA - Cliente -251685120 aceitou recomendação do evento Tomorrowland
+LANCAMENTO - -503335168
+INFO - Cliente -99420416 solicitando ingresso no evento Tomorrowland
+INFO - Cliente -99420416 do evento Tomorrowland solicitou lugar 0
+INFO - Cliente -494942464 solicitando ingresso no evento SuperBowl
+RECOMENDACAO IGNORADA - Cliente -494942464 recusou a recomendação do evento Tomorrowland
+INFO - Thread cliente -494942464 do evento SuperBowl processada
+INFO - Cliente -478157056 solicitando ingresso no evento SuperBowl
+RECOMENDACAO IGNORADA - Cliente -478157056 recusou a recomendação do evento Tomorrowland
+INFO - Thread cliente -478157056 do evento SuperBowl processada
+INFO - Cliente -91027712 solicitando ingresso no evento Tomorrowland
+INFO - Cliente -91027712 do evento Tomorrowland solicitou lugar 1
+INFO - Cliente -503335168 solicitando ingresso no evento Tomorrowland
+INFO - Cliente -503335168 do evento Tomorrowland solicitou lugar 2
+INFO - Cliente -251685120 solicitando ingresso no evento Tomorrowland
+INFO - Cliente -251685120 do evento Tomorrowland solicitou lugar 3
+INFO - Cliente -234899712 solicitando ingresso no evento SuperBowl
+RECOMENDACAO IGNORADA - Cliente -234899712 recusou a recomendação do evento Tomorrowland
+INFO - Thread cliente -234899712 do evento SuperBowl processada
+INFO - Cliente -201328896 solicitando ingresso no evento Tomorrowland
+INFO - Cliente -201328896 do evento Tomorrowland solicitou lugar 4
+INFO - Cliente -243292416 solicitando ingresso no evento SuperBowl
+INFO - Thread cliente -243292416 do evento SuperBowl processada
+INFO - Cliente -32278784 do evento RockInRio aguardando autorização de pagamento
+INFO - Cliente -49064192 do evento RockInRio aguardando autorização de pagamento
+INFO - Cliente -40671488 do evento RockInRio aguardando autorização de pagamento
+INFO - Cliente -74242304 do evento RockInRio aguardando autorização de pagamento
+PAGAMENTO CONFIRMADO - Pagamento da compra do cliente -49064192 do evento RockInRio no lugar 3 foi autorizada
+COMPRA CONFIRMADA - Compra do cliente -49064192 no evento RockInRio confirmada no lugar 3
+INFO - Thread cliente -49064192 do evento RockInRio processada
+INFO - Cliente -57456896 do evento RockInRio aguardando autorização de pagamento
+PAGAMENTO RECUSADO - Pagamento do cliente -57456896 do evento RockInRio no lugar 1 não autorizada
+INFO - Thread cliente -57456896 do evento RockInRio processada
+INFO - Cliente -124709120 do evento SuperBowl aguardando autorização de pagamento
+INFO - Cliente -209721600 do evento SuperBowl aguardando autorização de pagamento
+INFO - Cliente -107923712 do evento SuperBowl aguardando autorização de pagamento
+INFO - Cliente -469764352 do evento SuperBowl aguardando autorização de pagamento
+INFO - Cliente -99420416 do evento Tomorrowland aguardando autorização de pagamento
+INFO - Cliente -226507008 do evento SuperBowl aguardando autorização de pagamento
+PAGAMENTO CONFIRMADO - Pagamento da compra do cliente -469764352 do evento SuperBowl no lugar 3 foi autorizada
+COMPRA CONFIRMADA - Compra do cliente -469764352 no evento SuperBowl confirmada no lugar 3
+INFO - Thread cliente -469764352 do evento SuperBowl processada
+INFO - Cliente -91027712 do evento Tomorrowland aguardando autorização de pagamento
+INFO - Cliente -503335168 do evento Tomorrowland aguardando autorização de pagamento
+INFO - Cliente -251685120 do evento Tomorrowland aguardando autorização de pagamento
+INFO - Cliente -201328896 do evento Tomorrowland aguardando autorização de pagamento
+PAGAMENTO CONFIRMADO - Pagamento da compra do cliente -201328896 do evento Tomorrowland no lugar 4 foi autorizada
+COMPRA CONFIRMADA - Compra do cliente -201328896 no evento Tomorrowland confirmada no lugar 4
+INFO - Thread cliente -201328896 do evento Tomorrowland processada
+INFO - Thread cliente -201328896 do evento RockInRio processada
+PAGAMENTO CONFIRMADO - Pagamento da compra do cliente -91027712 do evento Tomorrowland no lugar 1 foi autorizada
+COMPRA CONFIRMADA - Compra do cliente -91027712 no evento Tomorrowland confirmada no lugar 1
+INFO - Thread cliente -91027712 do evento Tomorrowland processada
+INFO - Thread cliente -91027712 do evento RockInRio processada
+PAGAMENTO RECUSADO - Pagamento do cliente -251685120 do evento Tomorrowland no lugar 3 não autorizada
+INFO - Thread cliente -251685120 do evento Tomorrowland processada
+INFO - Thread cliente -251685120 do evento SuperBowl processada
+PAGAMENTO RECUSADO - Pagamento do cliente -40671488 do evento RockInRio no lugar 2 não autorizada
+INFO - Thread cliente -40671488 do evento RockInRio processada
+PAGAMENTO CONFIRMADO - Pagamento da compra do cliente -107923712 do evento SuperBowl no lugar 2 foi autorizada
+COMPRA CONFIRMADA - Compra do cliente -107923712 no evento SuperBowl confirmada no lugar 2
+INFO - Thread cliente -107923712 do evento SuperBowl processada
+PAGAMENTO CONFIRMADO - Pagamento da compra do cliente -99420416 do evento Tomorrowland no lugar 0 foi autorizada
+COMPRA CONFIRMADA - Compra do cliente -99420416 no evento Tomorrowland confirmada no lugar 0
+INFO - Thread cliente -99420416 do evento Tomorrowland processada
+INFO - Thread cliente -99420416 do evento RockInRio processada
+PAGAMENTO CONFIRMADO - Pagamento da compra do cliente -32278784 do evento RockInRio no lugar 0 foi autorizada
+COMPRA CONFIRMADA - Compra do cliente -32278784 no evento RockInRio confirmada no lugar 0
+INFO - Thread cliente -32278784 do evento RockInRio processada
+PAGAMENTO RECUSADO - Pagamento do cliente -74242304 do evento RockInRio no lugar 4 não autorizada
+INFO - Thread cliente -74242304 do evento RockInRio processada
+PAGAMENTO RECUSADO - Pagamento do cliente -226507008 do evento SuperBowl no lugar 4 não autorizada
+INFO - Thread cliente -226507008 do evento SuperBowl processada
+PAGAMENTO RECUSADO - Pagamento do cliente -503335168 do evento Tomorrowland no lugar 2 não autorizada
+INFO - Thread cliente -503335168 do evento Tomorrowland processada
+PAGAMENTO RECUSADO - Pagamento do cliente -124709120 do evento SuperBowl no lugar 0 não autorizada
+INFO - Thread cliente -124709120 do evento SuperBowl processada
+PAGAMENTO RECUSADO - Pagamento do cliente -209721600 do evento SuperBowl no lugar 1 não autorizada
+INFO - Thread cliente -209721600 do evento SuperBowl processada
+INFO - Execução finalizada
+
+######## Relatório ########
+Evento: RockInRio
+Lugares: [0]:VENDIDO  [1]:VAZIO  [2]:VAZIO  [3]:VENDIDO  [4]:VAZIO  
+(2/5) vendidos - R$200.00
+2 clientes recusaram a recomendação
+3 clientes aceitaram a recomendação
+0 não tiveram lugares por indisponibilidade total
+3 tiveram pagamento recusado pela operadora
+0 tiveram a compra não confirmada
+
+Evento: SuperBowl
+Lugares: [0]:VAZIO  [1]:VAZIO  [2]:VENDIDO  [3]:VENDIDO  [4]:VAZIO  
+(2/5) vendidos - R$230.00
+3 clientes recusaram a recomendação
+1 clientes aceitaram a recomendação
+1 não tiveram lugares por indisponibilidade total
+3 tiveram pagamento recusado pela operadora
+0 tiveram a compra não confirmada
+
+Evento: Tomorrowland
+Lugares: [0]:VENDIDO  [1]:VENDIDO  [2]:VAZIO  [3]:VAZIO  [4]:VENDIDO  
+(3/5) vendidos - R$165.00
+0 clientes recusaram a recomendação
+0 clientes aceitaram a recomendação
+0 não tiveram lugares por indisponibilidade total
+2 tiveram pagamento recusado pela operadora
+0 tiveram a compra não confirmada
+
